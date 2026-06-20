@@ -85,7 +85,7 @@ doapl	:
 	   	conf/vzgot_list					\
 	   	$(APLR)/conf
 	   @ cp -a						\
-		README						\
+		README*						\
 		QUICK-START					\
 	   	$(APLR)
 	   @ cp -a etc/{users,groups,sudoers} $(APLR)/etc/

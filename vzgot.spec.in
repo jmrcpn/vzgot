@@ -49,7 +49,7 @@ long their kernel is a Linux one
 %files			
 %defattr(-, root,root,-)
 %doc %{name}-%{version}-%{release}.build_date
-%doc README QUICK-START
+%doc README* QUICK-START
 %dir %{_var}/run/%{name}
 %dir /%{name}
 %ghost %dir /vzcgroup
