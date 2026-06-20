@@ -3,7 +3,7 @@
 #-----------------------------------------------------------------------------
 Name		:	@@APPN@@
 Version		:	@@VERSION@@
-Release		:	0%{?dist}
+Release		:	@@RELEASE@@%{?dist}
 Summary		:	An application to drive linux container
 Group		:	System Environment/Daemons
 
