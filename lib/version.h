@@ -1,3 +1,3 @@
 //version definition
-#define VERSION "26.06.193"
+#define VERSION "26.06.194"
 #define RELEASE "0"
