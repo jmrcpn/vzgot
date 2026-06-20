@@ -1,0 +1,267 @@
+#-----------------------------------------------------------------------------
+%{?!dist:	%define	dist	@@DIST@@}
+#-----------------------------------------------------------------------------
+Name		:	@@APPN@@
+Version		:	@@VERSION@@
+Release		:	0%{?dist}
+Summary		:	An application to drive linux container
+Group		:	System Environment/Daemons
+
+Packager	:	@@PACKAGER@@
+
+License		:	GPLv2+
+URL		:	http://www.osukiss.org
+
+Source0		:	%{name}-%{version}.tar.gz
+
+#-----------------------------------------------------------------------------
+BuildRequires	:	gcc
+BuildRequires	:	make
+BuildRequires	:	libcap-devel
+BuildRequires	:	kernel-headers
+
+Requires	:	bash
+Requires	:	bc
+Requires	:	bind-utils
+Requires	:	bridge-utils
+Requires	:	coreutils
+Requires	:	gawk
+Requires	:	iproute
+Requires	:	procps-ng
+Requires	:	rsync
+Requires	:	sed
+Requires	:	util-linux
+
+BuildArch	:	x86_64
+
+%if 0%{?suse_version}
+Provides	:       procps-ng
+Requires	:       procps
+%endif
+
+#-----------------------------------------------------------------------------
+%description
+vzgot is a set of tool to manage linux container
+it allow to run a wide range of distribution, as
+long their kernel is a Linux one
+
+#-----------------------------------------------------------------------------
+%files			
+%defattr(-, root,root,-)
+%doc %{name}-%{version}-%{release}.build_date
+%doc README QUICK-START
+%dir %{_var}/run/%{name}
+%dir /%{name}
+%ghost %dir /vzcgroup
+%{_var}/lib/%{name}/etc/ssh
+%{_var}/lib/%{name}/cgroup.d/
+%{_var}/lib/%{name}/vztemplates
+%{_var}/lib/%{name}/contrib/*
+%{_usr}/sbin/%{name}
+%{_prefix}/libexec/%{name}/vzstat
+%{_prefix}/libexec/%{name}/utilities/setcpu
+%{_prefix}/libexec/%{name}/utilities/tstavg
+%{_prefix}/libexec/%{name}/shell/%{name}.build
+%{_prefix}/libexec/%{name}/shell/%{name}.close
+%{_prefix}/libexec/%{name}/shell/%{name}.create
+%{_prefix}/libexec/%{name}/shell/%{name}.destroy
+%{_prefix}/libexec/%{name}/shell/%{name}.exec
+%{_prefix}/libexec/%{name}/shell/%{name}.freeze
+%{_prefix}/libexec/%{name}/shell/%{name}.fboot
+%{_prefix}/libexec/%{name}/shell/%{name}.fboot.redhat
+%{_prefix}/libexec/%{name}/shell/%{name}.fboot.debian
+%{_prefix}/libexec/%{name}/shell/%{name}.fboot.osukiss
+%{_prefix}/libexec/%{name}/shell/%{name}.list
+%{_prefix}/libexec/%{name}/shell/%{name}.online
+%{_prefix}/libexec/%{name}/shell/%{name}.open
+%{_prefix}/libexec/%{name}/shell/%{name}.net
+%{_prefix}/libexec/%{name}/shell/%{name}.movefrom
+%{_prefix}/libexec/%{name}/shell/%{name}.rebuild
+%{_prefix}/libexec/%{name}/shell/%{name}.start
+%{_prefix}/libexec/%{name}/shell/%{name}.standby
+%{_prefix}/libexec/%{name}/shell/vzctl.standby
+%dir %{_sysconfdir}/%{name}/sites_data
+%dir %{_sysconfdir}/%{name}/names
+%config(noreplace) %{_sysconfdir}/%{name}/vzgot_config
+%config(noreplace) %{_sysconfdir}/%{name}/vzgot_list
+%config(noreplace) %{_sysconfdir}/%{name}/online.tpl
+%config(noreplace) %{_sysconfdir}/sysctl.d//%{name}.conf
+%config(noreplace) %{_var}/lib/%{name}/etc/shadow
+%config(noreplace) %{_var}/lib/%{name}/etc/resolv.conf
+%config(noreplace) %{_var}/lib/%{name}/etc/groups
+%config(noreplace) %{_var}/lib/%{name}/etc/users
+%config(noreplace) %{_var}/lib/%{name}/etc/sudoers
+%config(noreplace) %{_var}/lib/%{name}/etc/sysconfig/iptables
+%config(noreplace) %{_var}/lib/%{name}/etc/snmp/snmpd.conf
+
+#after install or upgrade
+%post
+CONFIG_FILE="/etc/%{name}/%{name}_config"
+
+if [ "$1" = 1 ]; then
+ sysctl -p > /dev/null 2>&1
+ if [ -f "$CONFIG_FILE" ]; then
+   if command -v zfs >/dev/null 2>&1; then
+     sed -i 's/^VZFS=ext4/VZFS=zfs/' "$CONFIG_FILE"
+     fi
+   fi
+ #extracting HOST nameserver to be used by container
+ if [ -f /etc/resolv.conf ] ; then
+   (						\
+   echo    "#Installation HOST: $HOSTNAME";	\
+   echo -n "#Installation date: ";		\
+   date	;					\
+   head -1 %{_var}/lib/%{name}/etc/resolv.conf;	\
+   /bin/sed 's/#.*//g' /etc/resolv.conf;	\
+   ) >> %{_var}/lib/%{name}/etc/resolv.conf
+   fi
+ #populating ssh default directory
+ if [ -f /etc/*ssh/sshd_config ] ; then
+   cp -a					\
+	/etc/*ssh/sshd_config	 		\
+	/var/lib/%{name}/etc/ssh/server
+   fi
+ if [ -f ~/.ssh/authorized_keys ] ; then
+   cp -a					\
+	~/.ssh/authorized_keys			\
+	/var/lib/%{name}/etc/ssh/access
+   fi
+ fi
+
+#=============================================================================
+%package		sysv
+Summary		:       %{name} configuration file for sysV
+
+#-----------------------------------------------------------------------------
+Requires	:	chkconfig
+Requires        :       lfs-bootscripts
+Requires        :       %{name} = %{version}-%{release}
+
+BuildArch	:	noarch
+
+#-----------------------------------------------------------------------------
+%description            sysv
+This package allow to use vzgot on a simple sysv (sysvinit)
+linux system.
+
+#-----------------------------------------------------------------------------
+Requires	:	lsb
+
+#-----------------------------------------------------------------------------
+%files                  sysv
+%defattr(-, root,root,-)
+%config(noreplace,missingok) %{_sysconfdir}/sysconfig/ifconfig.vz-br0
+%{_initrddir}/%{name}
+
+#-----------------------------------------------------------------------------
+%post			sysv
+if [ "$1" = 1 ]; then
+  %{_sbindir}/ifup vz-br0 2> /dev/null
+  %{_sbindir}/chkconfig %{name} on 2>/dev/null || :
+  fi
+
+#after upgrade or remove
+%preun			sysv
+if [ "$1" = 0 ]; then
+  %{_initrddir}/%{name} stop 2>/dev/null || :
+  %{_sbindir}/chkconfig --del %{name} 2>/dev/null || :
+  %{_sbindir}/ifdown vz-br0 2> /dev/null
+  fi
+
+#=============================================================================
+%package		systemd
+Summary		:       %{name} configuration file for systemd
+
+#-----------------------------------------------------------------------------
+Requires        :       %{name} = %{version}-%{release}
+
+BuildArch	:	noarch
+#-----------------------------------------------------------------------------
+%description            systemd
+This package allow to use vzgot on a linux systemd system.
+
+#-----------------------------------------------------------------------------
+%files                  systemd
+%defattr(-, root,root,-)
+%config(noreplace) %attr(0600,root,root) %{_sysconfdir}/NetworkManager/system-connections/vz-br0.nmconnection
+%{_var}/lib/%{name}/systemd/%{name}.init
+%{_prefix}/lib/systemd/system/%{name}.service
+
+#-----------------------------------------------------------------------------
+%post			systemd
+if [ "$1" = 1 ]; then
+  systemctl reload NetworkManager.service
+  systemctl restart NetworkManager.service
+  systemctl enable %{name}.service
+  systemctl start %{name}.service
+  fi
+systemctl daemon-reload
+systemctl reload %{name}.service
+
+#after upgrade or remove
+%preun			systemd
+if [ "$1" = 0 ]; then
+  systemctl stop %{name}.service
+  systemctl disable %{name}.service
+  systemctl daemon-reload
+  systemctl reload NetworkManager.service
+  systemctl restart NetworkManager.service
+  fi
+
+#=============================================================================
+%package		apparmor
+Summary		:       %{name} configuration file to be used with apparmor
+
+#-----------------------------------------------------------------------------
+Requires        :       apparmor
+Requires        :       %{name} = %{version}-%{release}
+
+BuildArch	:	noarch
+
+#-----------------------------------------------------------------------------
+%description            apparmor
+This package allow to have vzgot with apparmor facilities
+
+#-----------------------------------------------------------------------------
+%files                  apparmor
+%defattr(-, root,root,-)
+%config(noreplace,missingok) %{_sysconfdir}/apparmor.d/%{name}-profile
+
+#=============================================================================
+%prep
+%setup -q
+
+#-----------------------------------------------------------------------------
+#building application
+%build
+
+%define _smp_mflags -j%(/usr/bin/getconf _NPROCESSORS_ONLN)
+%{__make}						\
+	%{?_smp_mflags}					\
+	prod
+
+date > %{name}-%{version}-%{release}.build_date
+
+#-----------------------------------------------------------------------------
+%clean
+%{__rm} -rf %{buildroot}
+
+#-----------------------------------------------------------------------------
+#installing program
+%install
+%{__rm} -rf %{buildroot}
+
+%{__mkdir_p} -m 0755 %{buildroot}/etc/%{name}/sites_data
+%{__mkdir_p} -m 0755 %{buildroot}/etc/%{name}/names
+%{__mkdir_p} -m 0700 %{buildroot}/%{name}
+
+%{__make}						\
+	INITDIR=%{_initrddir}				\
+	DESTDIR="%{buildroot}"				\
+	install
+
+#-----------------------------------------------------------------------------
+%changelog
+@@CHANGELOG@@
+
+#-----------------------------------------------------------------------------

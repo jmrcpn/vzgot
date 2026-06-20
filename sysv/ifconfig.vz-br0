@@ -1,0 +1,16 @@
+#this bridge Interface is used by vzgot as virtual switch 
+#for containers 
+IFACE=vz-br0 
+ONBOOT=yes 
+SERVICE="bridge ip-static" 
+IP=192.0.2.1                    #Container default route 
+PREFIX=24 
+#---------------------------------------------------------------------- 
+CHECK_LINK=no                   # Don't check before bridge is created 
+STP=no                          # Spanning tree protocol, default no 
+#---------------------------------------------------------------------- 
+#defining an IPV6 ip number within a private range 
+IPV6="fc00::192.0.2.1" 
+PREFIX6=128 
+#---------------------------------------------------------------------- 
+IP_FORWARD=true

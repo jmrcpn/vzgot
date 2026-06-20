@@ -1,0 +1,52 @@
+#! /usr/bin/bash
+#echo "DEBUG PID=$$ Doing <$0>"
+#----------------------------------------------------
+#shell used to execute a process within the
+#container
+#This shell is called from the vzgot executable
+#
+#----------------------------------------------------
+#Syntaxe
+#vzgot.open VE_name VE_pid Program ARG1 ARG2....
+#	VE_name is the container dir name
+#	VE_pid is the container main process ID as seen
+#	by the host
+#	base_dir is this application root directory
+#	used for devel only.
+#----------------------------------------------------
+CONTNAME=$1
+VEPID=$2
+shift;
+shift;
+#----------------------------------------------------
+NSENTER=/usr/bin/nsenter
+#----------------------------------------------------
+CONFDIR=/etc/vzgot
+if ! [ -f $CONFDIR/vzgot_config ] ; then
+  echo "Missing vzgot config file"
+  exit 1	#trouble trouble
+  fi
+. $CONFDIR/vzgot_config
+
+. $CONFDIR/names/$CONTNAME
+
+if [ -z "$HOMEFS" ] ; then 
+  echo "Missing $CONTNAME HOMEFS variable"
+  exit 1	#trouble trouble
+  fi
+
+CONTDIR=$HOMEFS
+#specific container configuration override (if needed)
+if [ -f $CONTDIR/vzgot_config ] ; then
+  $CONTDIR/vzgot_config
+  fi
+
+#----------------------------------------------------
+#fork process is now part of container tasks
+(
+echo $$ > $VZCGROUP/containers/$CONTNAME/cgroup.procs
+#----------------------------------------------------
+#executing program
+$NSENTER -t $VEPID -m -u -i -n -p -r -w -T -F $* 
+)
+#####################################################

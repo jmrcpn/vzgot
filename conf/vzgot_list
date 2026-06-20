@@ -1,0 +1,9 @@
+#this file is used to lonik container name with template, distribution
+#and architecture.
+#-----------------------------------------------------------------
+#container name	template_name		distribution	architecture
+#-----------------------------------------------------------------
+dummy		vzgot-ok-10.1-x86_64	ok-1		x86_64
+vzgot1		centos-6-x86		centos-6	i386
+vzgot2		centos-6-x86_64		centos-6	x86_64
+#-----------------------------------------------------------------

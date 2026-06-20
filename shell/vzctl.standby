@@ -1,0 +1,101 @@
+#! /usr/bin/bash
+#----------------------------------------------------
+#shell used to duplicate openvz remote container and
+#duplicate them in standby mode
+#
+#----------------------------------------------------
+#Syntax
+#----------------------------------------------------
+BINOME=$1
+CONTAINER=$2		#Can be empty
+#----------------------------------------------------
+ETCVZGOT=/etc/vzgot
+CONFDIR=$ETCVZGOT
+
+#----------------------------------------------------
+. ${CONFDIR}/vzgot_config
+#ZFSPOOL manual override
+ZFSPOOL=pool_hdd0
+#----------------------------------------------------
+
+if [ -z ${BINOME} ] ; then
+  echo "Remote HOST NAME missing"
+  exit 1
+  fi
+if [ -z ${CONTAINER} ] ; then
+  CONTAINER=`ssh ${BINOME} vzlist -nHt | sed "s/^ *//" | cut -d ' ' -f1`
+  fi
+for cont in $(IFS=','; echo $CONTAINER)
+  do
+  LOCSTAT=`vzgot list | grep "^$cont " | grep "Up"`
+  if [ -n "${LOCSTAT}" ] ; then
+    echo -e "'$cont'\t already up and running on localhost=`hostname`"	
+    continue
+    fi
+  POOL=`zfs get -H quota | grep $cont`
+  if [ -z "${POOL}" ] ; then
+    echo "Container $cont need to be created first"
+    continue
+    fi
+  #------------------------------------------------------------------
+  NOTE=""
+  HOMEFS=`zfs get mountpoint -H | grep "/$cont	" | tr -s '\t' ' ' | cut -d ' ' -f3`
+  QUOTA=`zfs get quota -H | grep "/$cont" | tr '\t' ' ' | cut -d ' ' -f3`
+  ZFSPOOL=`zfs list | grep "/$cont " | cut -d '/' -f1`
+  RUNNING=`ssh ${BINOME} vzlist -nHt | sed "s/^ *//" | cut -d ' ' -f1 | grep "^$cont "`
+  if [ -n "$RUNNING" ] ; then
+    QUOTA=`ssh $BINOME "vzctl exec $cont df -hl | grep ploop  | tr -s ' ' | cut -d ' ' -f2"`
+    zfs set quota=${QUOTA} ${ZFSPOOL}/$cont
+    fi
+  mkdir -p $HOMEFS/rootfs
+  #------------------------------------------------------------------
+  #preparing data transfer
+  ID=$(uuidgen)
+  TGT="/vz/mnt_"$cont"_"$ID
+  ssh $BINOME "vzctl snapshot $cont --id=$ID" > /tmp/$ID 2>&1
+  if [ $? != 0 ] ; then
+    echo "Unable to create vzctl snapshot"
+    cat /tmp/$ID
+    exit 1
+    fi
+  ssh $BINOME "mkdir -p $TGT"
+  ssh $BINOME "vzctl snapshot-mount $cont --id=$ID --target $TGT" >> /tmp/$ID 2>&1
+  if [ $? != 0 ] ; then
+    echo "Unable to mount vzctl snapshot"
+    cat /tmp/$ID
+    exit 1
+    fi
+  #------------------------------------------------------------------
+  #data transfer
+  rsync -a						\
+	--delete 					\
+	--numeric-ids					\
+	--exclude dev					\
+	$BINOME:$TGT/*					\
+  	$HOMEFS/rootfs
+  #------------------------------------------------------------------
+  #closing data transfer
+  ssh $BINOME "vzctl snapshot-umount $cont --id=$ID" >> /tmp/$ID 2>&1
+  ssh $BINOME "rm -fr $TGT"
+  ssh $BINOME "vzctl snapshot-delete $cont --id=$ID" >> /tmp/$ID 2>&1
+  rm -fr /tmp/$ID
+  #------------------------------------------------------------------
+  #setting update Stamp
+  . $CONFDIR/names/$cont
+  if [ -z "$NOTE" ] ; then
+    echo "NOTE=\"Standby update\"" >> $CONFDIR/names/$cont
+    fi
+  sed -i								\
+    -e "s/^NOTE=.*$/NOTE=\"Last update from $BINOME at `date -R`\"/g"	\
+    -e "s/^ONBOOT=.*$/ONBOOT=\"Standby\"/g"				\
+    $CONFDIR/names/$cont
+  #------------------------------------------------------------------
+  #final report
+  USED=`df -h $HOMEFS | grep $HOMEFS | tr -s ' ' | cut -d ' ' -f3`
+  printf "%10s %-20s Standby Ready %-10s %s\n"				\
+	 	 `date +%T`						\
+		 $cont							\
+		 $QUOTA/$USED						\
+		 $HOMEFS
+  done
+exit 0

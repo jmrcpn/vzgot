@@ -1,0 +1,115 @@
+#! /usr/bin/bash
+#vzgot.rebuild
+#===================================================================
+#procedure to rebuild from start a list of container
+#its purpose is to generate 'clean' container over and over
+#$1 $2 etc... are the container to rebuild
+#===================================================================
+#lock procedure
+lockproc()
+
+{
+LOCKFILE=/var/lock/`basename $0`.$1.lck
+
+trap "rm -f $LOCKFILE ; exit 1" 1 2 3 15
+if (set -C; : > $LOCKFILE) 2> /dev/null ; then
+    echo $$ >> $LOCKFILE
+  else
+    echo "Another '`basename $0` $1' is running, existing at once!"
+    echo "remove $LOCKFILE, if it is not the case"
+    rm -f $LOCKFILE
+    exit 0;
+  fi
+}
+#-------------------------------------------------------------------
+#abort procedure
+abort ()
+
+{
+echo "Aborting \"$1\" container rebuilding"
+rm -f $LOCKFILE
+exit 1;
+}
+
+#===================================================================
+#rebuilding one container
+#$1 is the container name
+#===================================================================
+rebuild()
+
+{
+CONTNAME=$1
+
+if ! [ -f /etc/vzgot/vzgot_config ] ; then
+  echo "Missing vzgot config file"
+  exit 1	#trouble trouble
+  fi
+. /etc/vzgot/vzgot_config
+
+#specific container configuration override (if needed)
+if [ -f /$VZDIR/$CONTNAME/vzgot_config ] ; then
+  /$VZDIR/$CONTNAME/vzgot_config
+  fi
+
+#-------------------------------------------------------------------
+#is the list file file existing
+echo "Rebuilding $CONTNAME"
+CONFDIR=/etc/vzgot
+if [ ! -f $CONFDIR/vzgot_config ] ; then
+  echo "Missing vzgot config file"
+  exit 1	#trouble trouble
+  fi
+
+if [ ! -f $CONFDIR/names/$CONTNAME ] ; then
+  echo "Missing container <$CONFDIR/names/$CONTNAME> definition file"
+  exit 1        #trouble trouble
+  fi
+
+. $CONFDIR/names/$CONTNAME
+
+if [ -z $FULLNAME ] ; then
+  echo "Missing $CONTNAME FULLNAME variable within $CONTNAME definition file"
+  exit 1	#trouble trouble
+  fi
+
+if [ -z "$HOMEFS" ] ; then 
+  echo "Missing $CONTNAME HOMEFS variable"
+  exit 1	#trouble trouble
+  fi
+
+CONTDIR=$HOMEFS
+#specific container configuration override (if needed)
+if [ -f $CONTDIR/vzgot_config ] ; then
+  $CONDIR/vzgot_config
+  fi
+
+#locking building process
+lockproc $1
+
+if [ -f /$CONTDIR/first.pid ] ; then
+  vzgot shutdown $CONTNAME
+  while [ -f /$VZDIR/$CONTNAME/first.pid ] 
+    do
+    sleep 1
+    done
+  fi
+if [ -d /$CONTDIR ] ; then
+  vzgot freeze $CONTNAME 
+  vzgot destroy $CONTNAME 
+  fi
+vzgot create $FULLNAME
+echo "Rebooting \"$CONTNAME\""
+sleep 1
+vzgot boot $CONTNAME
+rm -f $LOCKFILE
+}
+
+#===================================================================
+#Main script
+#===================================================================
+while [ $# -gt 0 ]
+  do
+  rebuild $1
+  shift
+  done
+  

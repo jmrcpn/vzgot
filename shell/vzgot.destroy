@@ -1,0 +1,97 @@
+#!/usr/bin/bash
+#----------------------------------------------------
+#shell used to remove the root file system for a
+#container.
+#
+#----------------------------------------------------
+#Syntaxe
+#vzgot.destroy VE_name
+#	VE_name is the container dir name
+#	base_dir is this application root directory
+#	used for devel only.
+#----------------------------------------------------
+CONTNAME=$1
+#----------------------------------------------------
+CONFDIR=/etc/vzgot
+if [ ! -f $CONFDIR/vzgot_config ] ; then
+  echo "Missing vzgot config file"
+  exit 1	#trouble trouble
+  fi
+. $CONFDIR/vzgot_config
+
+if [ ! -f $CONFDIR/names/$CONTNAME ] ; then
+  echo "Missing container <$CONFDIR/names/$CONTNAME> definition file"
+  exit 1        #trouble trouble
+  fi
+. $CONFDIR/names/$CONTNAME
+
+if [ -z "$HOMEFS" ] ; then 
+  echo "Missing $CONTNAME HOMEFS variable"
+  exit 1	#trouble trouble
+  fi
+
+CONTDIR=$HOMEFS
+#specific container configuration override (if needed)
+if [ -f $CONTDIR/vzgot_config ] ; then
+  $CONDIR/vzgot_config
+  fi
+
+#----------------------------------------------------
+if [ ! -d $CONTDIR ] ; then
+  echo "Container $CONTNAME not existing"
+  exit 1
+  fi
+
+#----------------------------------------------------
+#checking if container is up and running
+if [ -f $CONTDIR/first.pid ] ; then
+  echo "Container $CONTNAME is up and running"
+  echo "Container must be stop first, try \"vzgot shutdown $CONTNAME\""
+  exit 2
+  fi
+#----------------------------------------------------
+VZSPOOL=/var/spool/vzgot
+case "$VZFS" in
+  ext4		)
+    sed -i -e"/$CONTNAME\t/d" /etc/fstab
+    if [ -x /usr/bin/systemctl ] ; then
+      systemctl daemon-reload
+      fi
+    umount $VZSPOOL/$CONTNAME
+    rm $VZSPOOL/$CONTNAME
+    rm -r $VZDIR/$CONTNAME
+    ret=$?
+    if [ $ret -ne 0 ]; then
+      echo -n "vzgot.destroy, unable to delete EXT4 file "
+      echo    "'$VZSPOOL/$CONTNAME' with command rm"
+      exit $ret
+      fi
+    ;;
+  lvm		)
+    umount $CONTDIR 
+    sed -i -e"/$CONTDIR\t/d" /etc/fstab
+    lvremove --quiet -f $VZSPOOL/$CONTNAME > /dev/null 2>&1
+    ret=$?
+    if [ $ret -ne 0 ]; then
+      echo -n "vzgot.destroy, unable to delete LVM file "
+      echo    "'$VZSPOOL/$CONTNAME' with command lvremove"
+      exit $ret
+      fi
+    ;;
+  zfs		)
+    zfs destroy $ZFSPOOL/$NAME
+    ret=$?
+    if [ $ret -ne 0 ]; then
+      echo -n "vzgot.destroy, unable to destroy "
+      echo    "ZFS $ZFSPOOL/$NAME using 'zfs destroy'"
+      exit $ret
+      fi
+    rmdir $CONTDIR
+    ;;
+  esac;
+RETVAL=$?
+if [ $RETVAL -eq 0 ] ; then
+  sed -i -e "s/^ONBOOT=.*$/ONBOOT=\"Destroyed\"/g" $CONFDIR/names/$CONTNAME
+  RETVAL=$?
+  fi
+exit $RETVAL

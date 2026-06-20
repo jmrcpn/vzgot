@@ -1,0 +1,73 @@
+#! /usr/bin/bash
+#----------------------------------------------------
+#shell used to list container actively online
+#$1 is an optional parameter to focus on a
+#specific online container
+#
+#----------------------------------------------------
+CONFDIR=/etc/vzgot
+if [ -f $CONFDIR/vzgot_config ] ; then
+  . $CONFDIR/vzgot_config
+  fi
+
+#JMPDBG kludge for now
+NUMCPU=`getconf _NPROCESSORS_ONLN`
+
+#----------------------------------------------------
+#list a summary of all active (live) containers
+#----------------------------------------------------
+do_all()
+
+{
+tostop=`ls -1 $CONFDIR/names | sort`
+for cont in ${tostop}
+  do
+  . $CONFDIR/names/$cont
+  CONTPID=""
+  if [ -f ${HOMEFS}/first.pid ] ; then
+    CONTPID=`cat ${HOMEFS}/first.pid`
+    fi
+  if [ -n "${CONTPID}" -a -e /proc/${CONTPID} ] ; then
+    NBRUSR=`nsenter -t ${CONTPID} -m -u -p who  | wc -l`
+    CUR=`date +'%s'`
+    START=`stat -c '%W' ${HOMEFS}/first.pid`
+    DIFF=$((${CUR} - ${START}))
+    i=${DIFF}
+    LOAD=`awk							\
+	   '{printf "%6.2f %6.2f %6.2f,  %s %s",$1,$2,$3,$4,$5}'\
+	   "${HOMEFS}/rootfs/etc/vzgot/loadavg"			\
+	 `
+    ((sec=i%60, i/=60, min=i%60, i/=60, hrs=i%24, day=i/24))
+    printf "%-13s UP for %3d days %2d:%02d:%02d," "${cont}:" $day $hrs $min $sec;
+    printf " %2d Users, %s %s\n" ${NBRUSR} "load average:" "${LOAD}"
+    fi
+  done
+}
+
+#----------------------------------------------------
+#main procedure
+
+
+REFRESH_DELAY=""
+while getopts "r:" opt; do
+  case $opt in
+    r) REFRESH_DELAY=$OPTARG ;;
+    *) echo "Usage: $0 [-t delay_in_seconds]" ; exit 1 ;;
+  esac
+  done
+
+shift $((OPTIND - 1))	#to get container name
+#tput civis
+if [ -n "${REFRESH_DELAY}" ] ; then
+  clear
+  while [ 1 ]
+    do
+    tput cup 0 0
+    do_all
+    sleep ${REFRESH_DELAY}
+    done
+  tput cnorm
+else
+  do_all
+fi
+

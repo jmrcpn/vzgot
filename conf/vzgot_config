@@ -1,0 +1,122 @@
+# Source shell script
+#==============================================================================
+# This file defines common variables needed by vzgot
+# to create containers.
+#==============================================================================
+# vzgot data directory
+VZ_DATA_LIB=/var/lib/vzgot
+# vzgot exec directory
+VZ_EXEC_LIB=/usr/libexec/vzgot
+# Container default home installation directory on HOST
+VZDIR=/vzgot/test
+#==============================================================================
+# BRIDGENAME is the bridge interface configured on the HOST
+BRIDGENAME="vz-br0"
+#==============================================================================
+# ETHNAME is the interface name inside the container 
+# (can be renamed at your convenience), usually named eth0.
+#------------------------------------------------------------------------------
+# Command used: ip link set 'veth_pid' name $ETHNAME
+ETHNAME="eth0"
+# Public (GUA) or Private (ULA) IPv6 Network prefix.
+NETIP6="fc00"
+#==============================================================================
+# CGROUP directory
+# This is the cgroupv2 mount point.
+# Note: No bind mount required as cgroup v2 manages hierarchy via directories.
+VZCGROUP="/sys/fs/cgroup/vzgot"
+#==============================================================================
+# Container filesystem type (ext4, lvm, zfs)
+VZFS=ext4
+# Container default disk size
+VZFS_SIZE="20G"
+#==============================================================================
+# LVM Configuration
+# Volume group name
+LVM=vzvol
+#==============================================================================
+# ZFS Configuration
+# ZFS pool name
+ZFSPOOL="pool_ssd0"
+#==============================================================================
+#where to find the template to show the container 
+#real-time online information (command vzgot status 'container')
+ONLINETPL="online.tpl"
+#==============================================================================
+#Say YES if you want the container to be working with 
+#mknode access
+PRIVILEGED="NO"
+#defining APPARMOR protection profile
+#APPARMOR_PROFILE="vzgot-profile"
+#==============================================================================
+# Default cgroup limitations
+# To set specific limits for a container, run:
+# "vzgot create contname.domain.tld"
+# Then adjust the values within /etc/vzgot/names/contname
+#
+# Note: Values below are percentages of the HOST total capacity.
+# % range is from 0.0 up to 100.0
+#============================================================
+# VZGOT MEMORY AND PROCESS RESOURCE DEFINITIONS
+#============================================================
+
+# MEMMAX (Memory Limit)
+#---------------------
+#- Description: Sets the maximum amount of physical RAM 
+#  available to the container (cgroup v2: memory.max).
+#- Kernel Requirement: CONFIG_MEMCG=y
+#- Logic: Defined as a percentage of the total HOST memory.
+MEMMAX=100.0
+
+# SWAPMAX (Swap Limit)
+#--------------------
+#- Description: Sets the maximum amount of swap space the 
+#  container can use (cgroup v2: memory.swap.max).
+#- Kernel Requirement: CONFIG_MEMCG_SWAP=y (requires 'swapaccount=1' boot param)
+#- Logic: Defined as a percentage of the HOST's available swap.
+SWAPMAX=100.0
+
+# PIDMAX (Process ID Limit)
+#-------------------------
+#- Description: Limits the maximum number of concurrent 
+#  tasks (processes/threads) allowed (cgroup v2: pids.max).
+#- Kernel Requirement: CONFIG_CGROUP_PIDS=y
+#- Logic: Calculated as a percentage of /proc/sys/kernel/pid_max.
+PIDMAX=100.0
+
+#============================================================
+# VZGOT CPU RESOURCE MANAGEMENT DEFINITIONS
+#============================================================
+
+# PWRCPU (Weight / Relative Priority)
+#-----------------------------------
+#- Description: Defines the CPU weight allocated to the 
+#  container relative to others (cgroup v2: cpu.weight).
+#- Kernel Requirement: CONFIG_CGROUP_SCHED=y and CONFIG_CGROUP_CPU=y
+#- Logic: Internal arbitrage within the VZGOT family (Imperial mode). 
+#  Parent group is set to 10000 at boot to dominate the HOST. 
+#  Containers receive a calculated ratio of this parent weight.
+#- Goal: Ensures CPU priority during contention.
+PWRCPU=95.0
+
+# MAXCPU (Quota / Execution Ceiling)
+#----------------------------------
+#- Description: Sets a hard limit on the CPU time the 
+#  container can consume (cgroup v2: cpu.max).
+#- Kernel Requirement: CONFIG_CFS_BANDWIDTH=y
+#- Logic: If MAXCPU=50.0, the container is strictly capped 
+#  at 50% of its available share, even if the host is idle.
+#- Goal: Strict resource isolation against runaway processes.
+MAXCPU=100.0
+
+# NUMCPU (Affinity / Core Pinning)
+#-------------------------------
+#- Description: Restricts the container to a specific number 
+#  of physical CPU cores (cgroup v2: cpuset.cpus).
+#- Kernel Requirement: CONFIG_CPUSETS=y
+#- Logic: On a 4-core host, NUMCPU=50.0 restricts access 
+#  to exactly 2 physical cores.
+#- Goal: Optimizes L2/L3 cache usage and physical isolation.
+NUMCPU=100.0
+
+#==============================================================================

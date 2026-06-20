@@ -1,0 +1,21 @@
+#===============================================================
+#Bridge configuration file from vzgot
+#===============================================================
+[connection]
+id=vz-br0
+uuid=98290ec3-5b5d-42f4-9358-c96ca8c33eda
+type=bridge
+interface-name=vz-br0
+
+[ethernet]
+
+[bridge]
+stp=false
+
+[ipv4]
+address=192.0.2.1/32
+method=manual
+
+[ipv6]
+address=fc00::192.0.2.1/128
+method=manual

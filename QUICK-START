@@ -1,0 +1,251 @@
+
+			QUICK-START
+
+
+This text describes the quick way to install a Linux container
+using vzgot. Hopefully this step by step guide should help you
+to setup a working example you can use to as a starting point
+to install your other containers.
+
+
+This procedure was performed and checked on a vanilla 
+Fedora 12 (without update), using kernel 2.6.31.5-127.fc12.x86_64.
+Those step are done on the HOST system of your containers.
+
+All given command are 'command line' as such you will
+have better feedback in case of trouble
+
+This procedure describes 5 easy steps to have your first container
+up and running.
+
+
+#===========================================================
+1 - Step one:    Bridging, Forwarding, ARPing.
+
+    Define a BRIDGE interface. Bridge interface is needed
+    to have the container connected to a network.
+
+    Install needed bridge package using the yum command:
+    -> yum install bridge-utils
+
+    Within the directory /etc/sysconfig/network-scripts create
+    a file named ifcfg-br0, and insert the following lines inside:
+
+#-----------------------------------------------------------
+DEVICE=br0
+TYPE=Bridge
+BOOTPROTO=static
+IPADDR=your.own.ip.number
+NETMASK=255.255.255.255
+ONBOOT=yes
+USERCTL=no
+DELAY=0
+STP=off
+#-----------------------------------------------------------
+    once the file is saved, type:
+
+    Type command:
+    -> service network restart
+
+    Everything should be fine, doing command
+    -> ifconfig br0
+    You should have a result such as:
+
+br0       Link encap:Ethernet  HWaddr M:A:C:A:D:R
+          inet addr:Y.O.I.N  Bcast:Y.O.I.N  Mask:255.255.255.255
+          inet6 addr: xxxx::xxxx:xxxx:xxxx:xxxx/64 Scope:Link
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:0 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:21 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:0 
+          RX bytes:0 (0.0 b)  TX bytes:3822 (3.7 KiB)
+
+
+   Edit file /etc/sysctl.conf and add the 4 next line
+#--
+#allowing forwarding routing
+net.ipv4.ip_forward = 1
+#to allow Bridge to answer ARP request
+net.ipv4.conf.br0.proxy_arp = 1
+#--
+   at the end of the file.
+
+   Then input the command
+   -> sysctl -p
+   This allow the host to route packet from/to container.
+
+   Using ping or other tools, make sure you are able to
+   reach Y.O.I.N from your internal network.
+
+#===========================================================
+2 - Step Two:    LVM	(OPTIONAL)
+
+	We advise you to use LVM (Logical Volume Management).
+	This will allow you to define specific disk space to
+	your containers and increase size on the fly if
+	it is needed.
+
+	For details, see Linux documentation about LVM.
+
+	Critical command are: (Example)
+	pvcreate PhysicalVolume [[PhysicalVolume...]
+	vgcreate vzvol PhysicalVolume [[PhysicalVolume...]
+	lvcreate -l 100%PVS -nconvol  vzvol PhysicalVolume [[PhysicalVolume...]
+
+	NOTE:	in our example the logical volume name is 'vzvol'.
+
+#===========================================================
+3 - Step Three	 Cgroup
+
+	'cgroup' are kernel functionalities to reduce
+	priviledges when working from inside containers.
+	(cpu usage, mknod allowing, etc..)
+
+	You should have 'cgroup' available on the host kernel.
+
+	add line:
+cgroup	/cgroup	cgroup	defaults	0 0
+	in your HOST /etc/fstab file.
+
+	do:
+	-> mount -a
+	-> ls /cgroup; command should return something like
+
+cpuacct.stat                     devices.deny
+cpuacct.usage                    devices.list
+cpuacct.usage_percpu             memory.failcnt
+cpu.rt_period_us                 memory.force_empty
+cpu.rt_runtime_us                memory.limit_in_bytes
+cpuset.cpu_exclusive             memory.max_usage_in_bytes
+cpuset.cpus                      memory.memsw.failcnt
+cpuset.mem_exclusive             memory.memsw.limit_in_bytes
+cpuset.mem_hardwall              memory.memsw.max_usage_in_bytes
+cpuset.memory_migrate            memory.memsw.usage_in_bytes
+cpuset.memory_pressure           memory.stat
+cpuset.memory_pressure_enabled   memory.swappiness
+cpuset.memory_spread_page        memory.usage_in_bytes
+cpuset.memory_spread_slab        memory.use_hierarchy
+cpuset.mems                      net_cls.classid
+cpuset.sched_load_balance        notify_on_release
+cpuset.sched_relax_domain_level  release_agent
+cpu.shares                       tasks
+devices.allow
+
+	This means 'cgroup' is now operational on your system.
+
+#===========================================================
+4 - Step Four:    vzgot
+	
+	Download vzgot (wget) and install it (rpm -Uhv)
+
+	- you may need to adjust file in /etc/vzgot/vzgot_config
+
+	LVM:
+	IF you have LVM device on the HOST, edit file
+	/etc/vzgot/vzgot_config and comment out the
+	variable:
+	LVM=vzvol
+	'vzvol' is the name used when you created your
+	logical volume, if you used another name, set
+	LVM value accordingly.
+	If you do not have LVM, keep LVM commented in.
+	LVM_SIZE is the size used to create container
+	(2Gig was sufficient during our test).
+
+	CGROUP:
+	in file /etc/vzgot/vzgot_config, you have a variable
+	CGROUP. Set it to a proper value if you had to set the
+	/cgroup directory somewhere else (ie: /dev/cgroup).
+	
+	If you do NOT use LVM and cgroup is mounted on
+	/cgroup you have nothing to change in /etc/vzgot/vzgot_config.
+	 	
+	
+#===========================================================
+5 - Step Five:    choosing the distribution you want to install
+
+	Download (wget) one of the distribution you want
+	to try from the http://download.openvz.org/template/precreated/
+	or from the vzgot site.
+		
+	As a demo, the file /etc/vzgot/vzgot_list, give you the choice 
+	of 3 distributions, centos-5, Fedora-12, Ubuntu9.04.
+	choose one of them and download the needed tar.gz file within
+	the director /var/lib/vzgot/vztemplate directory.
+
+	Configuration file /etc/vzgot/vzgot_list give you 3 containers
+	name related to each distribution (dflt-ctos-5,dflt-fc12,
+	dflt-ubu9.4), If for example, you choosed dflt-ctos-5, you need
+	to have file centos-5-x86.tar.gz available in the vztemplate
+	directory.
+
+	Before you proceed, you MUST assign an IP to your container
+	name, change your DNS and define dflt-ctos-5.ydomain.name
+	with an IP. Once this is done, make sure
+	hostname dflt-ctos-5.ydomain.name is resolved to an IP AND that IP 
+	is being routed to the host application
+
+	Be sure command 'dnsdomainname' is returning your
+	domainname on your (physical) Host.
+
+	Then proceed to create, firstboot and boot the container,
+	type the command:
+
+	-> vzgot.mksrvz dflt-ctos-5
+
+	If successful, input the command:
+	-> ps axww | grep vzgot
+
+	should display something like:
+	0:00 vzgot: container dflt-ctos-5 (el5.3/i386) up
+
+	This means your first container is up and running.
+	
+	Lets prove this. From a station within your network
+	try:
+
+	-> ping dflt-ctos-5
+	Answer should be 
+	64 bytes from dflt-ctos-5.your.domain (Y.O.I.N): icmp_seq=22 ttl=63 time=0.xx ms
+
+	This prove your container is connected to your network
+
+	Next but not the least
+
+	-> ssh -Y -t -l root dflt-ctos-5.your.domain
+	the requested root password is the same as one you are using on your HOST.
+
+	Once the container, commad
+	-> ps ax
+	will display something like
+
+PID TTY      STAT   TIME COMMAND
+    1 ?        Ss     0:00 init [3]  
+  276 ?        Ss     0:00 syslogd -m 0
+  300 ?        Ss     0:00 /usr/sbin/sshd
+  322 ?        Ss     0:00 sendmail: accepting connections
+  331 ?        Ss     0:00 sendmail: Queue runner@01:00:00 for /var/spool/clientmqueue
+  341 ?        Ss     0:00 /usr/sbin/httpd
+  343 ?        S      0:00 /usr/sbin/httpd
+  350 ?        Ss     0:00 crond
+  358 ?        Ss     0:00 /usr/sbin/saslauthd -m /var/run/saslauthd -a pam -n 2
+  359 ?        S      0:00 /usr/sbin/saslauthd -m /var/run/saslauthd -a pam -n 2
+  367 ?        Ss     0:00 sshd: root@pts/3 
+  369 pts/3    Ss     0:00 -bash
+  388 pts/3    R+     0:00 ps ax
+
+
+
+	Your Container is ALL SET.
+	(ET VOILA!)
+
+
+Caution:	dflt-ubu9.4 Note.
+
+	If you choosed dflt-ubu9.4 to test your first container, you may
+	have trouble to connect to container via SSH if your HOST is in 
+	"SELINUX=enforcing" mode.
+
+	To bypass the problem, set /etc/selinux/config file
+	with SELINUX=disable and reboot the HOST.
+

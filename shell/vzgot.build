@@ -1,0 +1,152 @@
+#!/usr/bin/bash
+#----------------------------------------------------
+#shell used to build the root file system for the
+#container, incoming file is a tar file to
+#insert within the vzgot directory structure
+#
+#----------------------------------------------------
+#Syntaxe
+#vzgot.build VE_name tpl_tar_filename dist arch base_dir
+#	VE_name is the container dir name
+#	tpl_tar_filename is the template file name to be used
+#	dist is the distribution name (fc12, rh7.3, el5.4, etc...)
+#	arch is the architecture base (i386, x86_64)
+#	base_dir is this application root directory
+#	used for devel only.
+#----------------------------------------------------
+CONTNAME=$1
+TARFILE=$2
+DIST=$3
+ARCH=$4
+
+#-------------------------------------------------------------------
+#abort procedure
+abort ()
+
+{
+echo "$1"
+exit 1;
+}
+#----------------------------------------------------
+if ! [ -f /etc/vzgot/vzgot_config ] ; then
+  abort "Missing vzgot config file"
+  fi
+. /etc/vzgot/vzgot_config
+
+#specific container configuration override (if needed)
+if [ -f $VZDIR/$CONTNAME/vzgot_config ] ; then
+  $VZDIR/$CONTNAME/vzgot_config
+  fi
+#----------------------------------------------------
+if [ -d $VZDIR/$CONTNAME ] ; then
+  echo "Container $CONTNAME already existing, must be destroyed first"
+  abort "Use command \"vzgot destroy $CONTNAME\" to do it"
+  fi
+
+#----------------------------------------------------
+#creating Container directory
+if [ -z "$VZFS_SIZE" ] ; then
+  VZFS_SIZE="2G"
+  fi
+VZSPOOL=/var/spool/vzgot
+case "$VZFS" in
+  ext4		)
+    mkdir -p $VZDIR/$CONTNAME
+    mkdir -p $VZSPOOL
+    rm -fr $VZSPOOL/$CONTNAME
+    fallocate -l $VZFS_SIZE $VZSPOOL/$CONTNAME
+    mke2fs -q -t ext4 -j -L$CONTNAME $VZSPOOL/$CONTNAME
+    echo -e "$VZSPOOL/$CONTNAME\t$VZDIR/$CONTNAME\text4\tdefaults\t0 0" \
+	     >> /etc/fstab
+    if [ -x /usr/bin/systemctl ] ; then
+      systemctl daemon-reload
+      fi
+    mount $VZSPOOL/$CONTNAME
+    ;;
+  lvm		)
+    mkdir -p $VZDIR/$CONTNAME
+    VZCONTNAME=`echo $CONTNAME | sed 's/\.//g' | sed 's/-//g'`
+    lvcreate -L$VZFS_SIZE -n$VZCONTNAME $VZSPOOL > /dev/null 2>&1
+    ret=$?
+    if [ $ret -ne 0 ]; then
+      abort "vzgot.build, unable to create LVM $VZCONTNAME on volume $LVM"
+      fi
+    mke2fs -q -t ext4 -j -L$VZCONTNAME /dev/$LVM/$VZCONTNAME
+    ret=$?
+    if [ $ret -ne 0 ]; then
+      abort "vzgot.build, unable to format LVM $VZCONTNAME with mke2fs"
+      fi
+    echo -e "$VZSPOOL/$VZCONTNAME\t$VZDIR/$CONTNAME\text4\tdefaults\t0 0" \
+	    >> /etc/fstab
+    mount $VZSPOOL/$VZCONTNAME
+    ;;
+  zfs		)
+    if [ -z "$ZFSPOOL" ] ; then
+      ZFSPOOL="tank"
+      fi
+    zfs create 						\
+      -o mountpoint=$VZDIR/$CONTNAME			\
+      -o quota=$VZFS_SIZE				\
+      $ZFSPOOL/$CONTNAME
+    ;;
+  esac
+mkdir -p $VZDIR/$CONTNAME/rootfs
+
+#installing template
+tar -C $VZDIR/$CONTNAME/rootfs -xf /var/lib/vzgot/vztemplates/$TARFILE
+ret=$?
+if [ $ret -ne 0 ]; then
+  abort "vzgot.build, Unable to install template file $TPL!"
+  fi
+#----------------------------------------------------
+#duplicating cgroup HOST setting (the limits you
+#want to be set to all created container)
+cp -ap $VZ_DATA_LIB/cgroup.d $VZDIR/$CONTNAME
+#----------------------------------------------------
+#setting the container architecture 
+echo $ARCH > $VZDIR/$CONTNAME/arch
+#setting the container distribution 
+echo $DIST > $VZDIR/$CONTNAME/dist
+#----------------------------------------------------
+#cleaning mtab
+rm -fr $VZDIR/$CONTNAME/rootfs/etc/mtab*
+#----------------------------------------------------
+#specific configuration according distribution
+case "$DIST" in 
+  "rh9"	)	
+     #setting variable  LD_ASSUME_KERNEL to help RPM utility
+     export ENVRPM="LD_ASSUME_KERNEL=2.4.1"
+     echo "export $ENVRPM" >> $VZDIR/$CONTNAME/rootfs/etc/bashrc
+     ;;
+  "*"	)	#nothing to do
+     ;;
+  esac
+#----------------------------------------------------
+#installing sysconfig file
+cp -a ${VZ_DATA_LIB}/etc/sysconfig/iptables		\
+      ${VZROOT}/etc/sysconfig/
+#----------------------------------------------------
+#installing needed RPM
+if [ -d $VZ_DATA_LIB/RPM/RPMS/$ARCH/$DIST ] ; then
+  (
+  #do we have specific rpm to add to template
+  cd $VZ_DATA_LIB/RPM/RPMS/$ARCH/$DIST
+  num=`ls -1 *.rpm | wc -l`
+  if [ $num -ge 1 ] ; then
+
+    VZROOT=$VZDIR/$CONTNAME/rootfs
+    CHROOT="/usr/bin/setarch $ARCH chroot"
+
+    mkdir $VZROOT/tmp/rpm
+    cp *.rpm $VZROOT/tmp/rpm
+    $CHROOT $VZROOT mount -t proc proc /proc
+    $CHROOT $VZROOT mount -t sysfs sysfs /sys
+    $CHROOT $VZROOT /usr/bin/bash -c "$ENVRPM rpm -U --quiet tmp/rpm/*.rpm"
+    $CHROOT $VZROOT umount /sys
+    $CHROOT $VZROOT umount /proc
+    fi
+  )
+  fi
+#----------------------------------------------------
+#final exit
+exit $ret

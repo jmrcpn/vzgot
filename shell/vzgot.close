@@ -1,0 +1,48 @@
+#! /usr/bin/bash
+#----------------------------------------------------
+#shell used to clean the host part (network, cgroup)
+#while stopping a vzgot Virtual Host
+#This shell is called from the vzgot executable
+#
+#----------------------------------------------------
+#Syntaxe
+#vzgot.open VE_name VE_pid [base_dir]
+#	VE_name is the container dir name
+#	VE_pid is the container main process ID as seen
+#	by the host
+#	base_dir is this application root directory
+#	used for devel only.
+#----------------------------------------------------
+CONTNAME=$1
+VEPID=$2
+
+#----------------------------------------------------
+CONFDIR=/etc/vzgot
+if ! [ -f $CONFDIR/vzgot_config ] ; then
+  echo "Missing vzgot config file"
+  exit 1	#trouble trouble
+  fi
+. $CONFDIR/vzgot_config
+
+. $CONFDIR/names/$CONTNAME
+
+if [ -z "$HOMEFS" ] ; then 
+  echo "Missing $CONTNAME HOMEFS variable"
+  exit 1	#trouble trouble
+  fi
+
+CONTDIR=$HOMEFS
+#specific container configuration override (if needed)
+if [ -f $CONTDIR/vzgot_config ] ; then
+  $CONTDIR/vzgot_config
+  fi
+
+#----------------------------------------------------
+#lets cancel all routing
+$VZ_EXEC_LIB/shell/vzgot.net $CONTNAME remove 
+#----------------------------------------------------
+if [ -d $VZCGROUP/containers/$CONTNAME ] ; then
+  rm -fr $CONTDIR/cgroup
+  rmdir $VZCGROUP/containers/$CONTNAME
+  fi
+exit 0

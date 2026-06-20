@@ -1,0 +1,53 @@
+#! /usr/bin/bash
+#----------------------------------------------------
+#shell used to display the list of container
+#
+#----------------------------------------------------
+affiche()
+
+{
+#$1=CallID
+#$2=NAME
+#$3=Boot status
+#$4=UP/DOWN
+#$5=IP
+#$6=HOMEFS
+#$7=NOTE
+
+CALLID=$1		#container call-ID
+NAME=$2			#container name
+BOOTSTAT=$3		#container boot status
+UPSTAT=$4		#container up or down
+IPADDR=$5		#container IP address
+HOMEFS=$6		#container home directory
+NOTE=$7
+
+taille=${#CALLID}
+tab1=`echo 25 - $taille | bc`
+  
+printf "%s%15s  %*s%9s  %30s  %-30s  %s\n" "$CALLID" "$NAME" $tab1 "$BOOTSTAT" "$UPSTAT" "$IPADDR" "$HOMEFS" "$NOTE"
+}
+
+#----------------------------------------------------
+CONFDIR=/etc/vzgot
+affiche	"CallID " "Name" "Boot_mode"  "running" "IP num" "home directory"
+for cont in `ls $CONFDIR/names`
+  do
+  CALLID=$cont
+  NAME=""
+  ONBOOT=""
+  HOMEFS=""
+  NOTE=""
+  . $CONFDIR/names/$cont
+  DOMAIN=`dnsdomainname`
+  IPADDR=`getent hosts $NAME.$DOMAIN | cut -d ' ' -f1`
+  UPSTAT="Down"
+  if [ -f $HOMEFS/first.pid ] ; then
+    CONTPID=`cat $HOMEFS/first.pid`
+    if [ -n "$CONTPID" -a -e /proc/$CONTPID ] ; then
+      UPSTAT="Up"
+      fi
+    fi
+  affiche $CALLID $NAME $ONBOOT $UPSTAT $IPADDR $HOMEFS "$NOTE"
+  done
+exit 0

@@ -1,0 +1,16 @@
+# HOW TO EDIT THIS FILE:
+# The "handy ruler" below makes it easier to edit a package description.  Line
+# up the first '|' above the ':' following the base package name, and the '|'
+# on the right side marks the last column you can put a character in.  You must
+# make exactly 11 lines for the formatting to be correct.  It's also
+# customary to leave one space after the ':'.
+
+     |-----handy-ruler------------------------------------------------------|
+vzgot: vzgot (A container manager)
+vzgot:
+vzgot: vzgot is a set of tool to manage linux container, it allow to run a
+vzgot: wide range of distribution (from RH-7.3 to FC12, Centos-4.6, 
+vzgot: Centos-5.3, centos6.4) while using a plain linux kernel 
+vzgot:
+vzgot: vzgot was written by Jean-Marc Pigeon
+vzgot:

@@ -1,0 +1,131 @@
+
+				VZGOT
+
+
+Description:
+
+	vzgot is a package to manage linux container.
+	It is compatible with a vanilla linux kernel (currently 2.6.31.6-162.fc12),
+	without needing any further kernel adjustment (project mandatory).
+
+	Most of the installation is done using shell script, allowing the
+	host admin to make local adjustment.
+
+	I was able to have containers (rh7.3, rh8, rh9, fc2 -> fc12,Centos 4.6 ->5.3,
+	ubuntu-8.04,ubuntu-9.04 ) for a total of 35, up and running on a vanilla FC12 
+	distribution.
+	Some old distribution need small adjustment and RPM are included within
+	the vzgot RPM (src.rpm included).
+
+	Template used by vzgot are the exact same one as used by openvz (this was
+	project mandatory).
+
+
+Commands:
+
+	Basic commands:
+
+	vzgot boot|shutdown container_name
+		To boot or shutdown the name container.
+		To debug your first container:
+			vzgot -d9 -f -v boot cont_name /bin/bash
+	
+
+	vzgot create container_name template_tar_filename distribution_name architecture
+		Takes template_tar_filename and stores it in the vzgot main directory
+		(/var/lib/vzgot/vzdir).
+
+	vzgot firstboot container_name distribution_name domain_name node_name ip_list
+		Configure the template to set the host name (node.domain.name),
+		prepare device definition (/dev/tty, etc..), configure network, etc...
+		Some specific site configuration allow you to prepare user, group, ssh key,
+		resolv.conf to be exactly the same on all generated container.
+		/var/lib/vzgot/etc is where common data are stored.
+
+	vzgot destroy container_name
+		To get rid of the container directory once and for all (need to
+		be shutdown first).
+
+
+
+	Complex commands:
+
+	vzgot.mksrvz nodename.your_domain.name [distribution] [architecture]
+		It is used to prepare a container (create, firstboot, boot) using
+		the nodename.your_domain.name resolution to extract IP.
+		You may need to change the TPL environment variable (within
+		the script) to fit your own template name.
+		(ours is TPL=linux-$DISTRIB-$CPUARCH-vzserver.tar.gz).
+
+	vzgot.redoall filename_list_to_redo	
+		This script check for a file /etc/vzgot/'filename_list_to_redo'
+		and use it to regenerate all set container.
+		There is a file /etc/vzgot/vzredoall as an example, it is
+		the list of all the templates we are able to succesfully run now.
+		(33 altogether).
+
+
+	Production command:
+
+	service vzgot start|stop
+		Classical redhat service start|stop .
+		This script will start all containers with a file named
+		/var/lib/vzgot/vzdir/cont_name/status
+		whose content is "BOOT=ON"
+		This script will stop all container with a file named
+		/var/lib/vzgot/vzdir/cont_name/first.pid
+		
+		
+Package structure:
+	
+	/etc/vzgot: directory with the configuration file needed
+	by the main host to create or manage a container.
+
+	/var/lib/vzgot: application core directory
+
+	/var/lib/vzgot/vzdir:	all container storage area,
+	the directory name is the container name.
+
+	/var/lib/vzgot/vzdir/cont_name:
+	- rootfs is the container root directory
+	- console is a file receiving ALL data transmitted
+	  to container /dev/console (/sbin/init boot process)
+	- first.pid is the file with the /sbin/init
+	- status, used to boot container, content is
+	  BOOT=ON or BOOT=OFF
+	
+	/var/lib/vzgot/RPM:
+	tree with RPM to be added for some distribution
+	to properly work(RH7.3 etc...), you can add your
+	own if you wish.
+	
+	/var/lib/vzgot/home:
+	template directory of common users to be added to 
+	the container during creation.
+	
+	/var/lib/vzgot/etc:
+	- groups, users list of group and users you want to
+	  be added at template creation.
+	- shadow, crypted password you want to set on 
+	  container.
+	- resolv.conf to be set in the container.
+	- sudoers to be added to container /etc/sudoers.
+
+	/var/lib/vzgot/cgroup.d:
+	- cgroup definition, which are duplicated to
+	  container home directory cgroup.d, such
+	  each container can have its own set of cgroup
+	  priviledges.
+	
+Notes:
+	We are using our own template (the one used with the openvz package),
+	they are fine tuned to do what we want (be able to use container
+	to compile package, check bug on distribution configuration). 
+	to make sure you own template can be used we have made a successful 
+	test using standard openvz template centos-5-x86_64-devel.tar.gz 
+	as vzgot feed. 
+
+	Please feel free to tweak it. 
+	You are welcome to give me feedback about it.
+
+	jmp AT safe DOT ca

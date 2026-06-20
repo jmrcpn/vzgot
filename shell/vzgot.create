@@ -1,0 +1,154 @@
+#! /usr/bin/bash
+#-------------------------------------------------------------------
+#procedure to install a specific VZserver 
+#$1 is the vzserver node name    (must include domain name)
+#[$2] is the vzserver node IPNUMBER 
+#-------------------------------------------------------------------
+if [ -z $1 ] ; then
+  echo "You need to specify at least the nodename"
+  exit 1
+  fi
+
+FULLNAME=$1
+NODENAME=`echo $FULLNAME | cut -d '.' -f1`
+DOMAIN=`echo $FULLNAME | cut -d '.' -f2-`
+if [ -z $DOMAIN ] ; then
+  DOMAIN=`hostname -d`
+  fi
+
+IPNUM=$2
+if [ -z $IPNUM ] ; then
+  IPNUM=`dig +short $NODENAME.$DOMAIN | head -1 | grep -v [a-z]`
+  fi
+
+CONFDIR=/etc/vzgot
+#===================================================================
+#setting default distribution and Architecture.
+DISTRIB="ok-1"
+CPUARCH="x86-64"
+#===================================================================
+#defining default template name 
+#you can modify it according your own template setup name rule
+TPL=$DISTRIB-$CPUARCH.tar.gz
+#===================================================================
+. $CONFDIR/vzgot_config
+#===================================================================
+#lock procedure
+lockproc()
+
+{
+LOCKFILE=/var/run/`basename $0`.$1.pid
+
+trap "rm -f $LOCKFILE ; exit 1" 1 2 3 15
+if (set -C; : > $LOCKFILE) 2> /dev/null ; then
+    echo $$ >> $LOCKFILE
+  else
+    echo "Another '`basename $0` $1' is running, existing at once!"
+    echo "remove $LOCKFILE, if it is not the case"
+    rm -f $LOCKFILE
+    exit 0;
+  fi
+}
+#-------------------------------------------------------------------
+#abort procedure
+abort ()
+
+{
+echo "$1"
+rm -f $LOCKFILE
+exit 1;
+}
+
+#===================================================================
+#main process
+
+#locking building process
+lockproc $NODENAME
+#===================================================================
+#getting all the needed information from the vzgot_list file
+ENTRY=`sed 's/#.*//g' $CONFDIR/vzgot_list	|	\
+		 grep -v '^[[:space:]]*$'	|	\
+		 grep $NODENAME`
+
+read -r NODE TEMPLATE DISTRIB CPUARCH <<< $(echo $ENTRY)
+if [ -z "$NODE" ] ; then
+  abort "Unable to find \"$NODENAME\" definition within  /etc/vzgot/vzgot_list"
+else
+#setting distribution
+  FLINUX="RedHat"
+  case "$DISTRIB" in
+    "ok-1"	)
+      FLINUX="Osukiss"	#Osukiss family distribution
+      ;;
+    "centos-7"	|				\
+    "centos-6"	|				\
+    "centos-5"	|				\
+    "rhel-7"	|				\
+    "rhel-6"	|				\
+    "rhel-5"	)
+      FLINUX="RedHat"	#Redhat family distribution
+      ;;
+    "ovzubu9.4"	|				\
+    "ubu9.4"	|				\
+    "ubu8.4"	)
+      FLINUX="Debian"	#Debian family distribution
+      ;;
+    "*"		)
+      abort "Unknown Linux distribution, exiting"
+      exit 1 
+      ;;
+    esac;
+#===================================================================
+#extracting node ip number
+  if [ -z "$IPNUM" ] ; then
+    abort "No IP number found for $NODENAME hostname"
+    fi
+#-------------------------------------------------------------------
+#let create the name file
+mkdir -p $CONFDIR/names
+rm -fr $CONFDIR/names/$NODENAME.destroyed
+cat > $CONFDIR/names/$NODENAME << EOF
+#----------------------------------------------------
+#vzgot site '$NODENAME' generation date:`date`
+#----------------------------------------------------
+NAME=$NODENAME
+FULLNAME=$FULLNAME	
+#----------------------------------------------------
+#booting information
+ONBOOT="Yes"
+HOMEFS=$VZDIR/$NODENAME
+ONLINETPL=${ONLINETPL}
+#----------------------------------------------------
+#Container working Mode
+PRIVILEGED=${PRIVILEGED}
+#----------------------------------------------------
+#cgroup quota limitations 
+MEMMAX=${MEMMAX}
+SWAPMAX=${SWAPMAX}
+PIDMAX=${PIDMAX}
+PWRCPU=${PWRCPU}
+MAXCPU=${MAXCPU}
+NUM=${NUMCPU}
+#----------------------------------------------------
+EOF
+#-------------------------------------------------------------------
+#lets create the node file system
+  TPL=$TEMPLATE.tar.gz
+  `dirname $0`/vzgot.build $NODENAME $TPL $DISTRIB $CPUARCH
+  RETVAL=$?
+  if [ $RETVAL -ne 0 ] ; then 
+    abort "Unable to create $NODENAME root file system"
+    fi
+#-------------------------------------------------------------------
+#lets do the node first boot
+  vzgot firstboot -D $FLINUX -i $IPNUM -d $DOMAIN -n $NODENAME $NODENAME
+  RETVAL=$?
+  if [ $RETVAL -ne 0 ] ; then 
+    abort "Unable to do $NODENAME first boot"
+    fi
+#-------------------------------------------------------------------
+#everything fine
+echo "$NODENAME is now installed, to start it do \"vzgot boot $NODENAME\""
+#===================================================================
+  fi
+rm -f $LOCKFILE

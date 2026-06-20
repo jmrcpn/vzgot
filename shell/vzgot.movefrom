@@ -1,0 +1,73 @@
+#! /usr/bin/bash
+#-------------------------------------------------------------------
+#procedure to move a vzgot container from one remote server to the
+#local server
+#$1 is the remote server name 
+#$* are all the container to be moved from server name
+#-------------------------------------------------------------------
+RMTSERVER=$1
+shift;
+CONTLIST=$*
+#-------------------------------------------------------------------
+#doing one remote transfer
+dotransfer()
+
+{
+ONBOOT="no"
+echo "Starting $2 move from $1"
+
+ONLINE=`vzgot online | grep ^$2`
+if [ -n "$ONLINE" ] ; then
+  echo "$2 already running on local HOST, aborting move at once!"
+  exit 3
+  fi
+ONLINE=`ssh $1 "vzgot online | grep ^$2"`
+if [ -n "$ONLINE" ] ; then
+  ONBOOT="yes"
+  echo "Container $2 is online, lets update it first"
+  vzgot standby $1 $2
+  ssh $1 "sed -i 				\
+	  -e'/^ONBOOT/s:=.*$:=\"No\":'		\
+	  /etc/vzgot/names/$2"
+  ssh $1 "vzgot shutdown $2"
+  if [ $? -ne 0 ] ; then
+    echo "Trouble to shutdown remote $2, exiting at once!"
+    exit 3
+    fi
+  fi
+echo "Doing last standby duplication of $2"
+vzgot standby $1 $2
+if [ $? -ne 0 ] ; then
+  echo "Trouble to duplicate remote $2, on local server! Exiting at once"
+  exit 4
+  fi
+#setting local server as bootable
+sed -i 							\
+  -e"s:ONBOOT=\"Standby\":ONBOOT=\"$ONBOOT\":"	\
+  /etc/vzgot/names/$2
+#starting server on local HOST
+if [ "$ONBOOT" = "yes" ] ; then
+  vzgot boot $2
+  fi
+}
+#-------------------------------------------------------------------
+if [ -z "$RMTSERVER" ] ; then
+  echo "You must provide the remote server name a first argument" 
+  exit 1
+  fi
+if [ -z "$CONTLIST" ] ; then
+  echo "You must provide at least on container within the remote server"
+  exit 2
+  fi
+if [ "$CONTLIST" = "all" ] ; then
+  CONTLIST=`ssh $RMTSERVER "vzgot list | tail +2 | cut -d ' ' -f1 | sort -n"`
+  fi
+if [ "$CONTLIST" = "online" ] ; then
+  CONTLIST=`ssh $RMTSERVER "vzgot online"`
+  fi
+for cnt in $CONTLIST
+  do
+  dotransfer $RMTSERVER $cnt
+  done
+
+exit 0

@@ -1,0 +1,133 @@
+#! /usr/bin/bash
+#----------------------------------------------------
+#shell used to assign/remove route needed by
+#a container when container is started or stopped
+#
+#----------------------------------------------------
+#Syntax
+#vzgot.net VE_name assign|remove [base_dir]
+#	VE_name is the container dir name
+#	"assign" to set container needed route 
+#	"remove" to reset container needed route 
+#	base_dir is this application root directory
+#	used for devel only.
+#----------------------------------------------------
+CONTNAME=$1
+ACTION=$2
+#----------------------------------------------------
+#$1 action (assign,remove)
+#$2 ip address 
+#$3 IPV6 or IPV4
+setroute ()
+
+{
+IPV=$3
+if [ -z "$IPV" ] ; then
+  IPV=4
+  fi 
+case "$1" in
+  "assign"	)
+  #pre-emptive route assignation
+    ip -$IPV route add $2 dev $BRIDGENAME
+    ;;
+  "remove"	)
+    ip -$IPV route del $2 dev $BRIDGENAME
+    ;;
+  *		)
+    echo "ACTION request '$1' is unexpected!"
+    ;;
+  esac
+}
+#----------------------------------------------------
+CONFDIR=/etc/vzgot
+if ! [ -f $CONFDIR/vzgot_config ] ; then
+  echo "Missing vzgot config file"
+  exit 1	#trouble trouble
+  fi
+. $CONFDIR/vzgot_config
+
+. $CONFDIR/names/$CONTNAME
+
+if [ -z "$HOMEFS" ] ; then
+  echo "Missing $CONTNAME HOMEFS variable"
+  exit 1        #trouble trouble
+  fi
+
+CONTDIR=$HOMEFS
+
+#specific container configuration override (if needed)
+if [ -f $CONTDIR/vzgot_config ] ; then
+  $CONTDIR/vzgot_config
+  fi
+#----------------------------------------------------
+FLINUX="RedHat"
+if [ -f $CONTDIR/linux ] ; then
+  FLINUX=`cat $CONTDIR/linux`
+  fi
+
+#lets prepare all routing according type of linux
+#RedHat beeing the default
+case "$FLINUX" in 
+  "Osukiss"	)
+     NETINFO="$CONTDIR/rootfs/etc/sysconfig"
+     for f in $NETINFO/ifconfig.*
+       do
+       EXT=`basename $f | cut -d'-' -f2`
+       case "$EXT" in 
+         "lo"	)	#local interface, nothing to do 
+           ;;
+         *	)
+           ADDR=`grep "^IP=" $f | cut -d'=' -f2 | tr -d '"'`
+	   if [ -n "$ADDR" ] ; then
+	     setroute $ACTION $ADDR 4
+	     fi
+           ADDR6=`grep "^IPV6=" $f | cut -d'=' -f2 | tr -d '"'`
+	   if [ -n "$ADDR6" ] ; then
+	     setroute $ACTION $ADDR6 6
+	     fi
+           LSTADDR6=`grep "^IPV6SECONDARIES=" $f | cut -d'=' -f2 | tr -d '"'`
+	   if [ -n "$LSTADDR6" ] ; then
+	     for ipv6_sec in ${LSTADDR6}
+	       do
+	       setroute $ACTION ${ipv6_sec} 6
+	       done
+	     fi
+           ;;
+	 esac
+       done
+    ;;
+  "Debian"	)
+     NETINFO="$CONTDIR/rootfs/etc/network"
+     for ADDR in `grep address $NETINFO/interfaces | cut -d' ' -f2`
+       do
+       setroute $ACTION $ADDR
+       done
+     ;;
+  "RedHat"	|						\
+  "*"		)
+     NETINFO="$CONTDIR/rootfs/etc/sysconfig/network-scripts"
+     for f in $NETINFO/ifcfg-*
+       do
+       EXT=`basename $f | cut -d'-' -f2`
+       case "$EXT" in 
+         "lo"	)	#local interface, nothing to do 
+           ;;
+         *	)
+           ADDR=`grep ^IPADDR $f | cut -d'=' -f2`
+	   setroute $ACTION $ADDR
+           ADDR6=`grep "^IPV6ADDR=" $f | cut -d'=' -f2`
+	   if [ -n "$ADDR6" ] ; then
+	     setroute $ACTION $ADDR6 6
+	     fi
+           ADDR6=`grep "^IPV6ADDR_SECONDARIES=" $f | cut -d'=' -f2`
+	   if [ -n "$ADDR6" ] ; then
+	     setroute $ACTION $ADDR6 6
+	     fi
+           ;;
+         esac
+       done
+     ;;
+
+  esac
+#----------------------------------------------------
+exit 0

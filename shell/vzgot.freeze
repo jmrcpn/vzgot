@@ -1,0 +1,95 @@
+#! /usr/bin/bash
+#-------------------------------------------------------------------
+#procedure to duplicate critical container configuration file
+#within host sites_data
+#$* is the list of container to 
+#-------------------------------------------------------------------
+CONTLIST=$*
+
+CONFDIR=/etc/vzgot
+SITEDATA=$CONFDIR/sites_data
+#-------------------------------------------------------------------
+#To "freeze" container contents
+dofreeze ()
+
+{
+if [ ! -f $CONFDIR/names/$1 ] ; then
+  echo "Missing vzgot container config file"
+  exit 1	#trouble trouble
+  fi
+. $CONFDIR/names/$1
+
+#creating container site data
+mkdir -p $SITEDATA/$1
+
+#Make sure the root ssh directory is existing
+mkdir -p $SITEDATA/$1
+chmod 750 $SITEDATA/$1
+
+#probing common critical data
+rsync						\
+	-a					\
+	$HOMEFS/rootfs/etc/sysconfig		\
+	$HOMEFS/rootfs/etc/openssh		\
+	$HOMEFS/rootfs/etc/group		\
+	$HOMEFS/rootfs/etc/passwd		\
+	$HOMEFS/rootfs/etc/pki			\
+	$HOMEFS/rootfs/etc/shadow		\
+	$HOMEFS/rootfs/etc/zypp			\
+	$SITEDATA/$1/etc
+
+#probing certbot if present
+if [ -d $HOMEFS/rootfs/etc/certbot ] ; then	\
+  rsync						\
+	-a					\
+	$HOMEFS/rootfs/etc/certbot		\
+	$SITEDATA/$1/etc
+  fi
+#probing letsencrypt if present
+if [ -d $HOMEFS/rootfs/etc/letsencrypt ] ; then	\
+  rsync						\
+	-a					\
+	$HOMEFS/rootfs/etc/letsencrypt		\
+	$SITEDATA/$1/etc
+  fi
+
+#protecting root ssh data
+if [ -d $HOMEFS/rootfs/root/.ssh ] ; then	\
+  mkdir -p $HOMEFS/rootfs/root/.ssh
+  rsync						\
+	-a					\
+	$HOMEFS/rootfs/root/.ssh		\
+	$SITEDATA/$1/root
+  fi
+
+#to populate home directory
+if [ -d $HOMEFS/rootfs/home ] ; then		\
+  #to cherry-pick user directory contents
+  for USER in `ls $HOMEFS/rootfs/home`
+    do
+    mkdir -p 					\
+	$SITEDATA/$1/home/$USER/
+    chown					\
+	--reference=$HOMEFS/rootfs/home/$USER	\
+	$SITEDATA/$1/home/$USER/
+    cp						\
+	-a					\
+	$HOMEFS/rootfs/home/$USER/.ssh		\
+	$SITEDATA/$1/home/$USER/
+    done
+  fi
+
+}
+#-------------------------------------------------------------------
+if [ ! -f $CONFDIR/vzgot_config ] ; then
+  echo "Missing vzgot config file"
+  exit 1	#trouble trouble
+  fi
+. $CONFDIR/vzgot_config
+
+for cnt in $CONTLIST
+  do
+  dofreeze $cnt
+  done
+
+exit 0

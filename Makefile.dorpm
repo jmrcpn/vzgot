@@ -1,0 +1,164 @@
+#--------------------------------------------------------------------
+#Define ALL RPM function
+#--------------------------------------------------------------------
+APLR	=  $(APPNAME)-$(VERSION)
+#--------------------------------------------------------------------
+binary	:  rpm
+	   @ echo "Making RPM binary"
+	   # echo $(RPMDIR)
+	   @ rpmbuild						\
+		--quiet						\
+		--define "_topdir $(RPMDIR)"			\
+		--rebuild					\
+		$(RPMDIR)/SRPMS/$(APPNAME)-$(VERSION)*.src.rpm
+	   @ echo "RPM binary completed"
+
+rpm	:  spec vztar
+	   @ echo "Making RPM src"
+	   @ rm -fr 						\
+		$(RPMDIR)/SOURCES				\
+		$(APPNAME)*.src.rpm
+	   @ mkdir -p $(RPMDIR)/SOURCES
+	   @ mv $(APLR).tar.gz $(RPMDIR)/SOURCES
+	   @ rpmbuild						\
+		--quiet						\
+		--define "_topdir $(RPMDIR)"			\
+		-bs						\
+		spec 
+	   @ rm -f spec
+	   @ echo "RPM src completed"
+
+#--------------------------------------------------------------------
+PACKAGER?= To be defined
+DIST	?= .dvl
+RPM_DATE = $(shell date "+%a %b %d %Y")
+CHANGELOG= * $(RPM_DATE) $(PACKAGER) - $(VERSION)-$(RELEASE)\n- Automatic build from Makefile.
+
+spec	:  $(APPNAME).spec.in
+	   @ sed						\
+             -e 's/@@DIST@@/$(DIST)/g' 				\
+	     -e 's/@@APPN@@/$(APPNAME)/g'			\
+	     -e 's/@@VERSION@@/$(VERSION)/g'			\
+	     -e 's/@@RELEASE@@/$(RELEASE)/g'			\
+	     -e 's/@@PACKAGER@@/$(PACKAGER)/g'			\
+	     -e 's/@@CHANGELOG@@/$(CHANGELOG)/g'		\
+	     < $< > $@
+#--------------------------------------------------------------------
+vztar	:  doapl
+	   @ tar zcf $(APLR).tar.gz $(APLR)
+	   @ rm -fr $(APLR)
+	   @ echo $(APLR).tar.gz ready
+
+doapl	:
+	   @ rm -fr $(APLR).tar.gz
+	   @ mkdir -p						\
+		$(APLR)/apparmor				\
+		$(APLR)/conf					\
+		$(APLR)/lib					\
+		$(APLR)/app					\
+		$(APLR)/etc					\
+		$(APLR)/cgroup.d				\
+		$(APLR)/etc/sysconfig				\
+		$(APLR)/etc/snmp				\
+		$(APLR)/shell					\
+		$(APLR)/systemd					\
+		$(APLR)/sysv					\
+		$(APLR)/utilities				\
+		$(APLR)/contrib
+	   @ #adding group information
+	   @ cp -ap cgroup.d/devices.* $(APLR)/cgroup.d
+	   @ #adding application sources
+	   @ cp -a apparmor/* $(APLR)/apparmor/
+	   @ cp -a app/*.c $(APLR)/app/
+	   @ cp -a lib/{*.c,*.h} $(APLR)/lib/
+	   @ cp -a utilities/*.c $(APLR)/utilities/
+	   @ cp -a shell/vzgot* $(APLR)/shell
+	   @ cp -a shell/vzctl.* $(APLR)/shell
+	   @ cp -a systemd/* $(APLR)/systemd/
+	   @ cp -a sysv/* $(APLR)/sysv/
+	   @ cp -a contrib/* $(APLR)/contrib
+	   @ #adding configuration file
+	   @ cp -a						\
+	   	conf/online.tpl					\
+	   	conf/sysctl.conf				\
+		conf/vzgot_config				\
+	   	conf/vzgot_list					\
+	   	$(APLR)/conf
+	   @ cp -a						\
+		README						\
+		QUICK-START					\
+	   	$(APLR)
+	   @ cp -a etc/{users,groups,sudoers} $(APLR)/etc/
+	   @ cp -a etc/{resolv.conf,shadow} $(APLR)/etc/
+	   @ cp -a etc/sysconfig $(APLR)/etc/
+	   @ cp -a etc/snmp $(APLR)/etc/
+	   @ #adding construction file
+	   @ cp -a 						\
+		Makefile					\
+		Makefile.dorpm					\
+		Makefile.vers					\
+		$(APPNAME).spec.in				\
+	      	$(APLR)/
+	   @ @ cp -a app/Makefile $(APLR)/app/
+	   @ @ cp -a lib/Makefile $(APLR)/lib
+	   @ @ cp -a utilities/Makefile $(APLR)/utilities/Makefile
+
+#--------------------------------------------------------------------
+#installing application
+INITDIR ?= /etc/rc.d/init.d
+
+install	:
+	   @ install -d $(DESTDIR)/usr/sbin/
+	   @ install -d $(DESTDIR)/var/run/$(APPNAME)
+	   @ #adding executable
+	   @ install app/vzgot $(DESTDIR)/usr/sbin
+	   @ #adding utlities,tests program
+	   @ install -d $(DESTDIR)/usr/libexec/$(APPNAME)/utilities
+	   @ install app/vzstat $(DESTDIR)/usr/libexec/$(APPNAME)/
+	   @ install utilities/{tstavg,setcpu}				\
+		$(DESTDIR)/usr/libexec/$(APPNAME)/utilities/
+	   @ #adding init file
+	   @ install -d $(DESTDIR)/$(INITDIR)
+	   @ # Adding sysctl configuration file
+	   @ install -d $(DESTDIR)/etc/sysctl.d
+	   @ install -m 0644 conf/sysctl.conf				\
+		   $(DESTDIR)/etc/sysctl.d/$(APPNAME).conf
+	   @ #adding configuration file
+	   @ install -d $(DESTDIR)/etc/$(APPNAME)
+	   @ install -m 0644 conf/vzgot_config $(DESTDIR)/etc/$(APPNAME)
+	   @ install -m 0644 conf/vzgot_list $(DESTDIR)/etc/$(APPNAME)
+	   @ install -m 0644 conf/online.tpl $(DESTDIR)/etc/$(APPNAME)
+	   @ install -d $(DESTDIR)/var/lib/$(APPNAME)
+	   @ cp -ap etc $(DESTDIR)/var/lib/$(APPNAME)
+	   @ install -d $(DESTDIR)/var/lib/$(APPNAME)/etc/ssh
+	   @ install -d $(DESTDIR)/var/lib/$(APPNAME)/etc/ssh/server
+	   @ install -d $(DESTDIR)/var/lib/$(APPNAME)/etc/ssh/access
+	   @ install -d $(DESTDIR)/var/lib/$(APPNAME)/etc/sysconfig
+	   @ cp -ap contrib $(DESTDIR)/var/lib/$(APPNAME)
+	   @ cp -ap cgroup.d $(DESTDIR)/var/lib/$(APPNAME)
+	   @ #adding apparmor profile
+	   @ install -d $(DESTDIR)/etc/apparmor.d/
+	   @ cp -ap							\
+		apparmor/vzgot-profile					\
+		$(DESTDIR)/etc/apparmor.d/
+	   @ #adding templates directory
+	   @ install -d $(DESTDIR)/var/lib/$(APPNAME)/vztemplates
+	   @ install -d $(DESTDIR)/var/lib/$(APPNAME)/vzdir
+	   @ #adding application shell script
+	   @ install -d $(DESTDIR)/usr/libexec/$(APPNAME)/shell
+	   @ install shell/vzgot.* $(DESTDIR)/usr/libexec/$(APPNAME)/shell/
+	   @ install shell/vzctl.* $(DESTDIR)/usr/libexec/$(APPNAME)/shell/
+	   @ install -vD						\
+	   	sysv/ok_init.sh $(DESTDIR)/$(INITDIR)/$(APPNAME)
+	   @ install -vD						\
+		systemd/vzgot.init -t $(DESTDIR)/var/lib/$(APPNAME)/systemd
+	   @ install -vDm0640						\
+		systemd/vzgot.service -t $(DESTDIR)/usr/lib/systemd/system/
+	   @ install -vDm0640						\
+		systemd/vz-br0.nmconnection				\
+		-t $(DESTDIR)/etc/NetworkManager/system-connections/
+	   @ install -vDm0640 sysv/ifconfig.vz-br0 -t $(DESTDIR)/etc/sysconfig
+
+#--------------------------------------------------------------------
+RPMDIR	=	$(CURDIR)/rpmbuild
+#====================================================================

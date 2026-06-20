@@ -1,0 +1,120 @@
+#! /usr/bin/bash
+#
+# vzgot		This shell script takes care of starting and stopping
+#               vzgot container with the "ON" status
+#
+# description:	Scan vzgot vdir directory to find out about container
+#		and start them if requested.
+#
+#
+CONFDIR=/etc/vzgot
+if [ -f $CONFDIR/vzgot_config ] ; then
+  . $CONFDIR/vzgot_config
+  fi
+
+#------------------------------------------------------------------
+vzgotstart()
+
+{
+modprobe br_netfilter
+modprobe iptable_filter
+modprobe ip6table_filter
+echo 1 > /proc/sys/net/bridge/bridge-nf-call-iptables
+mount -t cgroup2 none $CGROUP
+count=0
+for cont in `ls $CONFDIR/names`
+  do
+  . $CONFDIR/names/$cont
+  onboot=`echo $ONBOOT | tr [:upper:] [:lower:]`
+  if [ "$onboot" != "yes" ] ; then
+    continue
+    fi
+  CONTDIR=$VZDIR/$cont
+  if [ -n "$HOMEFS" ] ; then
+    CONTDIR=$HOMEFS
+    fi
+  CONTPID=""
+  if [ -f $CONTDIR/first.pid ] ; then
+    CONTPID=`cat $CONTDIR/first.pid`
+    fi
+  if [ -n "$CONTPID" -a -e /proc/$CONTPID ] ; then
+    continue
+    fi
+  delay=`expr  $count \* 3  + 10`
+  # log_info_msg "$delay seconds delay to boot container $cont"
+  (
+  sleep $delay
+  BOOTLOG=$CONTDIR/bootlog
+  vzgot boot $cont > $BOOTLOG 2>&1
+  date >> $BOOTLOG
+  ) &
+  # evaluate_retval
+  count=`expr $count + 1`
+  done
+}
+
+vzgotstop()
+
+{
+MAXT=30
+count=0
+tostop=`ls $CONFDIR/names | sort -r`
+for cont in ${tostop}
+  do
+  . $CONFDIR/names/$cont
+  CONTDIR=$VZDIR/$cont
+  if [ -n "$HOMEFS" ] ; then
+    CONTDIR=$HOMEFS
+    fi
+  CONTPID=""
+  if [ -f $CONTDIR/first.pid ] ; then
+    CONTPID=`cat $CONTDIR/first.pid`
+    fi
+  if [ -n "$CONTPID" -a -e /proc/$CONTPID ] ; then
+    sleep 0.2
+    vzgot shutdown $cont &
+    count=`expr $count + 1`
+    fi
+  done
+for ((t=1;t<$MAXT;t++))
+  do
+  sleep 0.5
+  remain=`vzgot online | wc -l`
+  if [ $remain = 0 ] ; then
+    umount $CGROUP
+    break
+    fi
+  done
+}
+
+#------------------------------------------------------------------
+case "$1" in
+  start)
+	# Start daemons.
+	if [ -f ${CGROUP}/cgroup.controllers ] ; then
+	  echo "+cpuset +memory" >${CGROUP}/cgroup.subtree_control
+	  fi
+	vzgotstart
+	;;
+
+  stop)
+	if [ -f ${CGROUP}/cgroup.controllers ] ; then
+	  echo "-cpuset -memory" >${CGROUP}/cgroup.subtree_control
+	  fi
+	# Stopping daemons.
+	vzgotstop
+	;;
+
+  reload)
+	$0 stop
+	sleep 4
+	$0 start
+	;;
+
+  *)
+	echo "Usage: vzgot {start|stop|reload|status}"
+	exit 1
+esac
+
+exit 0
+

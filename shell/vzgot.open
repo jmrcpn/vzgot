@@ -1,0 +1,134 @@
+#! /usr/bin/bash
+#echo -n "DEBUG PID=$$ Doing <$0>  " ; date
+#----------------------------------------------------
+#shell used to setup the host part (network, cgroup)
+#while starting a vzgot Virtual Host
+#This shell is called from the vzgot executable
+#	vzgot boot cont_name
+#
+#----------------------------------------------------
+#Syntaxe
+#vzgot.open VE_name VE_pid [base_dir]
+#	VE_name is the container dir name
+#	HS_pid is the vzgot container master process
+#	VE_pid is the container main process ID as seen
+#	by the host
+#	base_dir is this application root directory
+#	used for devel only.
+#----------------------------------------------------
+CONTNAME=$1
+HSPID=$2
+VEPID=$3
+#----------------------------------------------------
+CONFDIR=/etc/vzgot
+if ! [ -f $CONFDIR/vzgot_config ] ; then
+  echo "Missing vzgot config file"
+  exit 1	#trouble trouble
+  fi
+. $CONFDIR//vzgot_config
+
+. $CONFDIR/names/$CONTNAME
+
+if [ -z "$HOMEFS" ] ; then 
+  echo "Missing $CONTNAME HOMEFS variable"
+  exit 1	#trouble trouble
+  fi
+
+CONTDIR=$HOMEFS
+#specific container configuration override (if needed)
+if [ -f $CONTDIR/vzgot_config ] ; then
+  $CONTDIR/vzgot_config
+  fi
+#======================================================================
+#loading distribution name
+DIST=`cat $CONTDIR/dist`
+
+#specific distribution last minut tuning
+case "$DIST" in
+  "centos-7"	|				\
+  "centos-6"	|				\
+  "centos-5"	)
+    echo "\"$DIST\" specific tuning"
+    (
+    #creating console
+    cd $CONTDIR/rootfs
+    if [ ! -p dev/console ] ; then
+      rm -fr dev/console
+      mknod dev/console p 
+      fi
+    chmod 600 dev/console
+    for trick in udevd udevadm start_udev
+      do
+      if [ -x sbin/$trick ] ; then
+       cp bin/true sbin/$trick
+       fi
+      done
+    for missdir in pts shm
+      do
+      mkdir -p dev/$missdir
+      done
+    rm -fr dev/pty* dev/tty[a-p]*
+    ) 
+    ;;
+  *		)
+    echo "\"$DIST\" no specific tuning"
+    ;;
+  esac 
+
+#======================================================================
+#creating the lock directory
+mkdir -p /run/vzgot
+#Set container as autonomous
+if [ -d $VZCGROUP/containers ] ; then
+  mkdir -p $VZCGROUP/containers/$CONTNAME
+  echo $VEPID > $VZCGROUP/containers/$CONTNAME/cgroup.procs
+  fi
+
+#======================================================================
+#to be sure to start fresh with veth pair
+ip link del v-$CONTNAME > /dev/null 2>&1
+#creation the veth pair.
+ip link add name v-$CONTNAME type veth peer name F_$CONTNAME
+ret=$?
+if [ $ret -ne 0 ]; then
+  echo "vzgot.init, unable to create veth $CONTNAME To/From pair"
+  exit $ret
+  fi
+#activating vteh HOST interface
+ip link set  v-$CONTNAME up
+ret=$?
+if [ $ret -ne 0 ]; then
+  echo "vzgot.init, unable to activate veth HOST part"
+  exit $ret
+  fi
+#linking HOST vteh to bridge
+brctl addif $BRIDGENAME v-$CONTNAME
+ret=$?
+if [ $ret -ne 0 ]; then
+  echo "vzgot.init, unable to link veth HOST part to bridge"
+  exit $ret
+  fi
+#giving the "from" part of the pair to VZ
+ip link set F_$CONTNAME netns $VEPID
+if [ $ret -ne 0 ]; then
+  echo "vzgot.init, unable to give F_$CONTNAME veth pair to VZ process"
+  exit $ret
+  fi
+#----------------------------------------------------
+#lets prepare all routing
+$VZ_EXEC_LIB/shell/vzgot.net $CONTNAME assign 
+#----------------------------------------------------
+#----------------------------------------------------
+VZROOT=$CONTDIR/rootfs
+#to prepare the container loadavg directory
+mkdir -p $VZROOT/etc/vzgot/
+chown 0755 $VZROOT/etc/vzgot/
+#to know about host kernel information
+mkdir -p $VZROOT/usr/lib/modules/
+cp -a /lib/modules/`uname -r` $VZROOT/usr/lib/modules/
+#----------------------------------------------------
+#setting the fastboot flag
+rm -fr $VZROOT/.autofsck
+touch $VZROOT/fastboot
+#----------------------------------------------------
+exit 0

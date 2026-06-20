@@ -1,0 +1,21 @@
+#include <tunables/global>
+
+profile vzgot-profile flags=(attach_disconnected, mediate_deleted) {
+
+  include <abstractions/base>
+
+  # 1. Allowing ALL capabilties (sys_admin, net_admin, etc..)
+  capability,
+
+  # 2. Alwwing all networks
+  network,
+
+  # 3. Autoriser absolument TOUS les types de montages, n'importe où
+  # 3. allowing mount and
+  mount,
+  remount,
+  umount,
+
+  # 4. Autoriser l'accès absolu en lecture/écriture/exécution partout (Y compris /dev)
+  /** rwlkmix,
+}

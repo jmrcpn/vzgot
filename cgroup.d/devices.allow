@@ -1,0 +1,17 @@
+# /dev/null and zero
+c 1:3 rwm
+c 1:5 rwm
+# /dev/tty
+c 5:0 rwm
+#Other tty devices (mknode only)
+c 4:* m
+# /dev/{,u}random
+c 1:9 rwm
+c 1:8 rwm
+# /dev/ptmx
+c 5:2 rwm
+# ALL /dev/pts
+c 136:* rwm
+# loop devices
+b 7:* rwm
+

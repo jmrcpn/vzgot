@@ -1,0 +1,4 @@
+#this file allow you to add common users to ALL
+#your container when creating them
+#format is
+#username encrypted_password groupd-name

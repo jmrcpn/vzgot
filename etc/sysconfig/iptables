@@ -1,0 +1,58 @@
+# iptables file standard for all CONTAINER.
+# Firewall configuration written by vzgot
+# the file is common and added to each container
+# if present in /var/lib/vzgot/etc/sysconfig/iptables
+# this file is given as a working example
+*filter
+:INPUT          ACCEPT  [0:0]
+:FORWARD        ACCEPT  [0:0]
+:OUTPUT         ACCEPT  [0:0]
+:std            -       [0:0]
+#-----------------------------------------------------------
+#NFLOG need ulogd daemon to report dropped/rejected packets
+#Defining a log drop rule (preset on groupe 1)
+#(/var/log/messages)
+-N logdrop
+-A logdrop    -j NFLOG    --nflog-group 1 --nflog-prefix "DROP "
+-A logdrop    -j DROP
+#Defining a log reject rule (Forcé sur le groupe 1)
+-N logrjct
+-A logrjct    -j NFLOG    --nflog-group 1 --nflog-prefix "RJCT "
+-A logrjct    -j REJECT    --reject-with icmp-host-prohibited
+#--------------------------------------------------------------
+#defining rule to reject without log
+-N rjct
+-A rjct -j DROP
+#-----------------------------------------------------------
+#standard rules
+-A FORWARD -j std
+-A INPUT -j std
+#-----------------------------------------------------------
+#accepting local loop
+-A std -i lo -j ACCEPT
+#-----------------------------------------------------------
+#acceptin already established link
+-A std -m state --state ESTABLISHED,RELATED -j ACCEPT
+#-----------------------------------------------------------
+#accepting icmp packet (should be already pre-filtered by Host)
+-A std -p icmp -j ACCEPT
+#-----------------------------------------------------------
+#accepting auth server
+-A std -p tcp -m tcp    -j ACCEPT --dport auth
+#accepting all Email related services
+-A std -p tcp -m tcp    -j ACCEPT --dport smtp
+-A std -p tcp -m tcp    -j ACCEPT --dport pop3
+-A std -p tcp -m tcp    -j ACCEPT --dport imaps
+-A std -p tcp -m tcp    -j ACCEPT --dport imap
+#accepting all WEB related services
+-A std -p tcp -m tcp    -j ACCEPT --dport http
+-A std -p tcp -m tcp    -j ACCEPT --dport https
+#accepting all SSH related services
+-A std -p tcp -m tcp   -j ACCEPT --dport ssh 
+#accepting all snmp related services
+-A std -p udp -m udp   -j ACCEPT --dport snmp 
+#===========================================================
+#reject and logging all other packet type
+-A std -j logrjct
+#-----------------------------------------------------------
+COMMIT

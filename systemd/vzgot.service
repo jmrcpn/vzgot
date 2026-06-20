@@ -1,0 +1,14 @@
+[Unit]
+Description=Containers
+Wants=network.target
+After=network-pre.target systemd-sysctl.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/bash /var/lib/vzgot/systemd/vzgot.init start
+ExecStop=/usr/bin/bash /var/lib/vzgot/systemd/vzgot.init stop
+ExecReload=/usr/bin/bash /var/lib/vzgot/systemd/vzgot.init reload
+
+[Install]
+WantedBy=multi-user.target

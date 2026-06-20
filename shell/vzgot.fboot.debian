@@ -1,0 +1,234 @@
+#! /usr/bin/bash
+#----------------------------------------------------
+#shell used to prepare container structure, this script
+#is called by the vzgot before any root pivot action.
+#It is used on the firstboot to prepare all needed file.
+#
+#----------------------------------------------------
+#Syntaxe
+#vzgot.fistboot VE_name node domain ip_list [Base]
+#	VE_name is the container dir name
+#	Node is the container hostname
+#	Domain is the container domainname 
+#	IP_LIST is an ip list (ip,ip1,ip2,..) used
+#		to prepare container network
+#	base_dir is this application root directory
+#		(used for devel only).
+#----------------------------------------------------
+CONTNAME=$1
+NODE=$2
+DOMAIN=$3
+LSTIP=$4
+#----------------------------------------------------
+if ! [ -f /etc/vzgot/vzgot_config ] ; then
+  echo "Missing vzgot config file"
+  exit 1	#trouble trouble
+  fi
+. /etc/vzgot/vzgot_config
+
+#specific container configuration override (if needed)
+if [ -f /$VZDIR/$CONTNAME/vzgot_config ] ; then
+  /$VZDIR/$CONTNAME/vzgot_config
+  fi
+#----------------------------------------------------
+VZROOT=/$VZDIR/$CONTNAME/rootfs
+#====================================================
+#procedure to implement redhat distribution file
+#----------------------------------------------------
+#Prepare /etc/hosts file
+#----------------------------------------------------
+
+HOSTS="/$VZDIR/$CONTNAME/rootfs/etc/hosts"
+(
+echo "#----------------------------------------------------"
+echo "#done by vzgot.fboot"
+echo "#----------------------------------------------------"
+echo -e "127.0.0.1\tlocalhost.localdomain\tlocalhost"
+) > $HOSTS
+
+if [ -n $LSTIP ] ; then
+  (
+  echo -n `echo $LSTIP | tr ',' ' ' | cut -d' ' -f1`
+  echo -e "\t$NODE.$DOMAIN\t\t$NODE"
+  echo "#----------------------------------------------------"
+  ) >> $HOSTS
+  fi
+
+#----------------------------------------------------
+#Prepare /etc/hostname
+#----------------------------------------------------
+HST="/$VZDIR/$CONTNAME/rootfs/etc/hostname"
+(
+echo "$NODE.$DOMAIN"
+) > $HST
+
+#----------------------------------------------------
+#Prepare /etc/network/interface
+#----------------------------------------------------
+#need directory to have /etc/init.d/networking to work
+mkdir -p /$VZDIR/$CONTNAME/rootfs/var/run/network
+
+#defining interface
+INT="/$VZDIR/$CONTNAME/rootfs/etc/network/interfaces"
+(
+echo "# Used by ifup(8) and ifdown(8). See the interfaces(5) manpage or"
+echo "# /usr/share/doc/ifupdown/examples for more information."
+echo
+echo "auto lo"
+echo "iface lo inet loopback"
+) > $INT
+if [ -n $LSTIP ] ; then
+  ETH0=`echo $LSTIP | tr ',' ' ' | cut -d' ' -f1`
+  (
+  echo
+  echo "auto eth0"
+  echo "iface eth0 inet static"
+  echo "address $ETH0"
+  echo "netmask 255.255.255.255"
+  echo "up route add default dev eth0"
+  ) >> $INT
+  ETHX=`echo $LSTIP | tr ',' ' ' | cut -s -d' ' -f2-`
+  aliasnum=1
+  for eth in $ETHX 
+    do
+    (
+    echo "auto eth0:$aliasnum"
+    echo "address $eth"
+    echo "netmask 255.255.255.255"
+    ) >> $INT
+    let aliasnum=aliasnum+1
+    done
+  fi
+#----------------------------------------------------
+#Prepare /dev directoy contents
+#----------------------------------------------------
+DEV="$VZROOT/dev"
+
+rm -fr $DEV
+mkdir -p $DEV
+mknod -m 666 $DEV/null c 1 3
+mknod -m 666 $DEV/zero c 1 5
+mknod -m 666 $DEV/random c 1 8
+mknod -m 666 $DEV/urandom c 1 9
+mkdir -m 755 $DEV/pts
+mkdir -m 1777 $DEV/shm
+mknod -m 666 $DEV/tty c 5 0
+mknod -m 600 $DEV/console p
+mknod -m 666 $DEV/tty0 c 4 0
+mknod -m 666 $DEV/full c 1 7
+mknod -m 600 $DEV/initctl p
+mknod -m 666 $DEV/ptmx c 5 2
+
+#----------------------------------------------------
+#Prepare /dev directoy fstab
+#----------------------------------------------------
+FSTAB="$VZROOT/etc/fstab"
+(
+echo -e "/vzgot\t\t/\t\text3\tdefaults\t0 0"
+echo -e "proc\t\t/proc\t\tproc\tdefaults\t0 0"
+echo -e "sysfs\t\t/sys\t\tsysfs\tdefaults\t0 0"
+echo -e "devpts\t\t/dev/pts\t\tdevpts\tdefaults\t0 0"
+echo -e "tmpfs\t\t/dev/shm\t\ttmpfs\tdefaults\t0 0"
+) > $FSTAB
+
+#====================================================
+#starting common container configuration process
+(
+
+cd /$VZ_DATA_LIB
+#----------------------------------------------------
+#insert a common root password within the vz
+
+if [ -f etc/shadow ] ; then
+  SHAD="$VZROOT/etc/shadow"
+  sed 's/#.*//g' etc/shadow | grep -v '^[[:space:]]*$' |	\
+  while read -r LINE
+    do
+    NAME=`echo $LINE | cut -d':' -f1`
+    (echo $LINE ; grep -v "^$NAME:" $SHAD) > $SHAD.new
+    mv -f $SHAD.new $SHAD
+    done
+  chmod 440 $SHAD
+  fi
+
+#setting the DNS resolver
+if [ -f etc/resolv.conf ] ; then
+  cp -a etc/resolv.conf $VZROOT/etc
+  fi
+
+#duplicating ssh Key if we want to have all container even.
+if [ -d etc/ssh ] ; then
+  #removing the hack to make original KEY
+  rm -fr $VZROOT/etc/rc2.d/S11sshhack
+  rm -fr $VZROOT/etc/init.d/ssh_key_hack.sh
+  (
+  for k in `ls etc/ssh/server/*key* 2> /dev/null` 
+    do
+    cp -a $k $VZROOT/etc/ssh
+    done
+  ROOTSSH=$VZROOT/root/.ssh
+  mkdir $ROOTSSH
+  chmod 700 $ROOTSSH
+  for k in `ls etc/ssh/access/*key* 2> /dev/null` 
+    do
+    cp -a $k $ROOTSSH
+    done
+  )
+  fi
+
+#insert iptables script
+if [ -f etc/sysconfig/iptables ] ; then
+  cp -a etc/sysconfig/iptables $VZROOT/etc/sysconfig
+  fi
+
+#adding sudoer informations
+if [ -f etc/sudoers ] ; then
+  cat etc/sudoers >> $VZROOT/etc/sudoers
+  fi
+
+#adding snmpd.conf specific to ALL container
+if [ -d $VZROOT/etc/snmp/ ] && [ -f etc/snmp/snmpd.conf ] ; then
+  cat etc/snmp/snmpd.conf>> $VZROOT/etc/snmp/snmpd.conf
+  fi
+
+)
+#end common container configuration  process
+#====================================================
+#lets create common users and groups
+ARCH=`cat $VZDIR/$CONTNAME/arch`
+CHROOT="/usr/bin/setarch $ARCH chroot"
+
+$CHROOT $VZROOT mount -t proc proc /proc
+$CHROOT $VZROOT mount -t sysfs sysfs /sys
+
+#creating common group
+if [ -f $VZ_DATA_LIB/etc/groups ] ; then
+  sed 's/#.*//g' $VZ_DATA_LIB/etc/groups | grep -v '^[[:space:]]*$' |	\
+  while read -r GRPNAME
+    do
+    $CHROOT $VZROOT groupadd $GRPNAME
+    done
+  fi
+
+#creating common users
+if [ -f $VZ_DATA_LIB/etc/users ] ; then
+  sed 's/#.*//g' $VZ_DATA_LIB/etc/users | grep -v '^[[:space:]]*$' |	\
+  while read -r NAME CRYPTED GRPNAME
+    do
+    if [ -d $VZ_DATA_LIB/home/$NAME ] ; then
+      cp -a $VZ_DATA_LIB/home/$NAME $VZROOT/tmp
+      SKEL="-k /tmp/$NAME"
+      fi
+    $CHROOT $VZROOT useradd -m $SKEL -p "$CRYPTED" -g $GRPNAME $NAME
+    rm -fr $VZROOT/tmp/$NAME
+    done
+  fi
+
+#removing udev family auto start
+$CHROOT $VZROOT update-rc.d -f udev remove > /dev/null 2>&1
+$CHROOT $VZROOT update-rc.d -f udev-finish remove > /dev/null 2>&1
+
+$CHROOT $VZROOT umount /sys
+$CHROOT $VZROOT umount /proc
+#====================================================
+exit 0
