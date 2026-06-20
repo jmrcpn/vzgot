@@ -90,7 +90,7 @@ adaptability.
 For deep dives into specific topics, please refer to our dedicated 
 sub-documentation guides:
 
-* [Installation & Packaging Guide](README.install)
-* [System Administrator Manual](README.manual)
-* [Advanced Network Configurations](README.network)
-* [OS Template Creation & Deployment](README.template)
+* [Installation & Packaging Guide](README.install.md)
+* [System Administrator Manual](README.manual.md)
+* [Advanced Network Configurations](README.network.md)
+* [OS Template Creation & Deployment](README.template.md)
