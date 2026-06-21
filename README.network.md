@@ -103,7 +103,62 @@ Secondary IP (Your LAN IP): 192.168.10.32/24
 
 Container IP: 192.168.10.56/24 (Gateway: 192.0.2.1)
 
-With this setup, the bridge acts like a network switch.
-Any device on your local LAN can now ping and communicate
-with your container directly, while the container continues
-to use 192.0.2.1 as its universal default gateway.
+Persistent Bridge Configuration (NetworkManager / nmcli)
+
+For systems running systemd with NetworkManager, here is
+how to persistently set up Scenario B so that it survives reboots.
+
+⚠️ SSH Safety Warning
+
+If you are configuring this remotely over SSH via eth0,
+swapping the IP to the bridge will momentarily drop your connection.
+To prevent getting permanently locked out, run these commands
+together in a single script or screen session.
+
+Step-by-Step Setup:
+
+Identify your network interfaces:
+Find the exact name of your physical network card (we will use eth0
+in this example):
+
+ip link show
+
+
+Create the persistent bridge interface:
+This creates the bridge profile in NetworkManager:
+
+sudo nmcli connection add type bridge con-name vz-br0 ifname vz-br0
+
+
+Configure the Bridge IP addresses:
+Assign both the native 192.0.2.1/32 address and your Host's
+physical LAN IP (e.g., 192.168.10.32/24) to the bridge.
+Also, set your local router as the gateway for the bridge:
+
+sudo nmcli connection modify vz-br0 ipv4.method manual \
+  ipv4.addresses "192.0.2.1/32,192.168.10.32/24" \
+  ipv4.gateway "192.168.10.1" \
+  ipv4.dns "1.1.1.1,8.8.8.8"
+
+
+Bind your physical interface to the bridge:
+Create a "slave" profile for your physical card eth0 and bind
+it to vz-br0:
+
+sudo nmcli connection add type bridge-slave con-name vz-br0-slave ifname eth0 master vz-br0
+
+
+Apply changes (The "Point of No Return" over SSH):
+Delete your old physical connection profile (usually called Wired connection 1 or eth0)
+and bring up the bridge. Running these commands as a one-liner ensures
+NetworkManager switches the interfaces instantly:
+
+sudo nmcli connection down eth0 && \
+sudo nmcli connection del eth0 && \
+sudo nmcli connection up vz-br0 && \
+sudo nmcli connection up vz-br0-slave
+
+
+Once completed, your Host is reachable at 192.168.10.32 via
+the vz-br0 bridge, and your containers can now natively join
+your local network.
