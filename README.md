@@ -93,4 +93,3 @@ sub-documentation guides:
 * [Installation & Packaging Guide](README.install.md)
 * [System Administrator Manual](README.manual.md)
 * [Advanced Network Configurations](README.network.md)
-* [OS Template Creation & Deployment](README.template.md)

@@ -1,9 +1,46 @@
-#this file is used to lonik container name with template, distribution
+#this file is used to link container name with template, distribution
 #and architecture.
+#A good source of container template can be found within
+#https://images.linuxcontainers.org/
 #-----------------------------------------------------------------
-#container name	template_name		distribution	architecture
+#The template file (A compressed tar file) must be available 
+#within /var/lib/vzgot/vztemplates directory
+#-rw-r--r-- 1 root root  10234339 Jun 24 05:59 alpine-3.24-ssh.rootfs.tar.xz
+#lrwxrwxrwx 1 root root        29 Jun 23 12:55 alpine-3.24.tar.xz -> alpine-3.24-ssh.rootfs.tar.xz
 #-----------------------------------------------------------------
-dummy		vzgot-ok-10.1-x86_64	ok-1		x86_64
-vzgot1		centos-6-x86		centos-6	i386
-vzgot2		centos-6-x86_64		centos-6	x86_64
+#Testing container using domain name example.com
+#and template extracted from https://images.linuxcontainers.org/
+#vzgot create 'cont_name'
+#will create a container with an IP and protected with iptables
+#Once installed you may need to use 
+#vzgot enter 'cont_name' and install ssh using the 
+#distribution package management tools
+#-----------------------------------------------------------------
+#This file is yours to be configured, container_name must
+#be a FQDN such as container_name.your_domaine.
+#
+#the command used to create those container is
+#vzgot create alpine.example.com 
+#
+#Here a list of container successfully installed with the
+#named distribution.
+#-----------------------------------------------------------------
+#cont_name	template_name		distribution	architecture
+alpine		alpine-3.24		alpine		x86_64
+debian		debian-202606		debian		x86_64
+fedora		fedora-20260714		fedora		x86_64
+gentoo		gentoo-260715		gentoo		x86_64
+osukiss		vzgot-ok-26.06		ok-1		x86_64
+ubuntu		ubuntu-20260713		ubuntu		x86_64
+void		voidlinux-260714	void		x86_64
+#-----------------------------------------------------------------
+#once installed and booted, the command
+#'vzgot online' should retourne something as:
+#alpine:       UP for   0 days  0:04:11,  0 Users, load average:   0.00   0.00   0.00,  1/5 483
+#debian:       UP for   0 days  0:04:08,  0 Users, load average:   0.00   0.00   0.00,  1/9 65
+#fedora:       UP for   0 days  0:04:05,  0 Users, load average:   0.00   0.01   0.01,  1/15 103
+#gentoo:       UP for   0 days  0:04:01,  0 Users, load average:   0.00   0.00   0.00,  1/4 892
+#osukiss:      UP for   0 days  0:03:58,  0 Users, load average:   0.00   0.00   0.00,  1/14 387
+#ubuntu:       UP for   0 days  0:03:56,  0 Users, load average:   0.00   0.00   0.00,  1/13 153
+#void:         UP for   0 days  0:03:53,  0 Users, load average:   0.00   0.00   0.00,  1/15 52
 #-----------------------------------------------------------------

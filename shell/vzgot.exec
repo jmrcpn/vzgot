@@ -43,10 +43,11 @@ if [ -f $CONTDIR/vzgot_config ] ; then
 
 #----------------------------------------------------
 #fork process is now part of container tasks
-(
-echo $$ > $VZCGROUP/containers/$CONTNAME/cgroup.procs
-#----------------------------------------------------
 #executing program
-$NSENTER -t $VEPID -m -u -i -n -p -r -w -T -F $* 
-)
+if [ -f ${HOMEFS}/rootfs/usr/bin/script ] ; then
+  exec $NSENTER -t $VEPID -m -u -i -n -p /usr/bin/script -q -c "$*"
+else
+  exec $NSENTER -t $VEPID -m -u -i -n -p "$*"
+fi
+#$NSENTER -t $VEPID -m -u -i -n -p -T setsid -c "$*"
 #####################################################

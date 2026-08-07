@@ -1,0 +1,41 @@
+#! /usr/bin/bash
+#echo -n "DEBUG PID=$$ Doing <$0>  " ; date
+#----------------------------------------------------
+#shell used to setup the host part (network, cgroup)
+#while starting a vzgot Virtual Host
+#This shell is called from the vzgot executable, via
+#	vzgot shutdown cont_name
+#
+#----------------------------------------------------
+CONTNAME=$1		#The container name
+#----------------------------------------------------
+#loading configuration
+CONFDIR=/etc/vzgot
+if [ -f $CONFDIR/vzgot_config ] ; then
+  . $CONFDIR//vzgot_config
+  if [ -f $CONFDIR/name/${CONTNAME} ] ; then
+    . $CONFDIR/names/${CONTNAME}
+    fi
+  fi
+
+if [ -z "$HOMEFS" -o -z "$FULLNAME" ] ; then 
+  echo "Missing ${CONTNAME} HOMEFS  or FULLNAME variable"
+  echo "check container config"
+  exit 1	#trouble trouble
+  fi
+
+#======================================================================
+if [[ "${FULLNAME}" =~ ^[0-9.]+$ ]]; then
+  IPNUM=${FULLNAME}
+else
+  IPNUM=`dig +short ${FULLNAME}`
+fi
+if [ -n "${IPNUM}" ] ; then
+  /usr/sbin/ip route del ${IPNUM} dev ${BRIDGENAME}
+  ret=$?
+  if [ $ret -ne 0 ]; then
+    echo "$0, Host is unable to delete route to container ${CONTNAME}"
+  fi
+fi
+#======================================================================
+exit 0

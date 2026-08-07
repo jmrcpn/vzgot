@@ -1,33 +1,14 @@
+// vim: smarttab tabstop=8 shiftwidth=2 expandtab
 /************************************************/
 /*						*/
 /*      Copyright:				*/
 /*	 Jean-Marc Pigeon <jmp@safe.ca>	 2018	*/
 /*						*/
 /************************************************/
-/* This program is free software; you can 	*/
-/* redistribute it and/or modify it under the 	*/
-/* terms of the GNU General Public License as	*/
-/* published by the Free Software Foundation	*/
-/* version 2 of the License			*/
 /*						*/
-/* This program is distributed in the hope that */
-/* it will be useful, but WITHOUT ANY WARRANTY; */
-/* without even the implied warranty of		*/
-/* MERCHANTABILITY or FITNESS FOR A PARTICULAR	*/
-/* PURPOSE.  See the GNU General Public License	*/
-/* for more details.				*/
-/*						*/
-/* You should have received a copy of the GNU	*/
-/* General Public License along with this 	*/
-/* program; if not, write to the Free Software	*/
-/* Foundation, Inc., 51 Franklin Street,	*/
-/* Fifth Floor, Boston, MA  02110-1301, USA.	*/
-/************************************************/
-/*						*/
-/*	Implement utility level procedure to	*/
-/*	local application specific configuration*/
-/*	All collected variable are stored	*/
-/*	within environement variables		*/
+/*	Implement utility level procedure to    */
+/*      display container configuration and     */
+/*      live status.                            */
 /*						*/
 /************************************************/
 #include	<errno.h>
@@ -36,6 +17,7 @@
 #include	<stdio.h>
 #include	<stdlib.h>
 #include	"dbglog.h"
+#include	"lowapl.h"
 #include	"lowtyp.h"
 #include	"utlapl.h"
 #include	"utlsys.h"
@@ -300,6 +282,7 @@ static const char *mapping[] = {
 _Bool isok;
 int num;
 const char *data;
+double valeur;
 STATYP *status;
 CPUINF *cpudata;
 char line[100];
@@ -308,6 +291,7 @@ char replace[60];
 
 isok=true;
 data=(const char *)0;
+valeur=0.0;
 status=tpl->status;
 cpudata=&(status->cpuinf[cpu_cont]);
 num=0;
@@ -415,12 +399,10 @@ switch (var->code) {
   case tpl_pidmax	:
   case tpl_pwrcpu	:
   case tpl_swapmax	:
-    if ((data=getenv(mapping[var->code]))!=(char *)0) {
-      double valeur;
-	
-      valeur=apl_getdouble(data);
-      num=snprintf(replace,sizeof(replace),var->format,valeur);
-      }
+    if ((data=getenv(mapping[var->code]))==(char *)0)
+      data="100.0";
+    valeur=apl_getdouble(data);
+    num=snprintf(replace,sizeof(replace),var->format,valeur);
     break;
   case tpl_throttle	:
     num=snprintf(replace,sizeof(replace),var->format,cpudata->nr_throttled);
@@ -552,7 +534,8 @@ return isok;
 /*	data.					*/
 /*						*/
 /************************************************/
-PUBLIC TPLPTR *cfg_open_online(const char *confdir,const char *contname,const char *tplname)
+PUBLIC TPLPTR *cfg_open_online(const char *confdir,pid_t cont_pid,
+                               const char *tplname)
 
 {
 #define	OPEP	"unicfg.c:cfg_open_online"
@@ -584,20 +567,25 @@ while (proceed==true) {
 			    OPEP,confdir,tplname);
 	phase=999;	//trouble trouble
 	}
-      (void) snprintf(ppath,sizeof(ppath),"%s/%s",confdir,tplname);
       break;
     case 1	:	//opening the file
+      (void) snprintf(ppath,sizeof(ppath),"%s/%s",confdir,tplname);
       if ((fichier=fopen(ppath,"r"))==(FILE *)0) {
 	(void) log_alert(0,"%s, Unable to open file <%s> (error=<%s> config?)",
 			    OPEP,ppath,strerror(errno));
 	phase=999;	//trouble trouble
 	}
       break;
-    case 2	:	//opening the file
-      tpl=(TPLTYP *)calloc(1,sizeof(TPLTYP));
-      tpl->status=sys_new_cont_status();
+    case 2      :       //get the container PID
       break;
-    case 3	:	//scanning template
+    case 3	:	//opening the file
+      tpl=(TPLTYP *)calloc(1,sizeof(TPLTYP));
+      if ((tpl->status=sys_new_cont_status(cont_pid))==(STATYP *)0) {
+	(void) log_alert(0,"%s, Unable to get container status (config?)",OPEP);
+	phase=999;	//trouble trouble
+        }
+      break;
+    case 4	:	//scanning template
       while ((fgets(line,sizeof(line)-1,fichier))!=(char *)0) {
 	numline++;
 	(void) apl_cleanstring(line);
@@ -621,7 +609,7 @@ while (proceed==true) {
 	}
       (void) fclose(fichier);
       break;
-    case 4	:	//is trouble detected freeing all TPL memoyr
+    case 5	:	//is trouble detected freeing all TPL memoyr
       if (isok==false)
 	tpl=(TPLTYP *)cfg_close_online((TPLPTR *)tpl);	//trouble detected
       break;
@@ -661,7 +649,6 @@ lines=(char **)0;
 phase=0;
 proceed=true;
 while (proceed==true) {
-  //(void) log_alert(0,"%s JMPDBG phase='%d'",OPEP,phase);
   switch (phase) {
     case 0	:	//Check if the template structure is ready
       if ((tpl==(TPLTYP *)0)||(tpl->lines==(char **)0)) {
@@ -754,7 +741,7 @@ while (proceed==true) {
   switch (phase) {
     case 0	:	//Checking template ready
       if ((tpl==(TPLTYP *)0)||(tpl->updated==(char **)0)) {
-	(void) log_alert(0,"%s, Template structure is not yet ready (Bug?)",OPEP);
+	(void) log_alert(0,"%s, Template structure is not ready yet, (Bug?)",OPEP);
 	phase=999;
 	}
       break;

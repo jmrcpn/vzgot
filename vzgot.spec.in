@@ -10,7 +10,7 @@ Group		:	System Environment/Daemons
 Packager	:	@@PACKAGER@@
 
 License		:	GPLv2+
-URL		:	http://www.osukiss.org
+URL		:	https://github.com/jmrcpn/vzgot
 
 Source0		:	%{name}-%{version}.tar.gz
 
@@ -22,6 +22,7 @@ BuildRequires	:	kernel-headers
 
 Requires	:	bash
 Requires	:	bc
+Requires	:	bird
 Requires	:	bind-utils
 Requires	:	bridge-utils
 Requires	:	coreutils
@@ -52,34 +53,46 @@ long their kernel is a Linux one
 %doc README* QUICK-START
 %dir %{_var}/run/%{name}
 %dir /%{name}
-%ghost %dir /vzcgroup
 %{_var}/lib/%{name}/etc/ssh
-%{_var}/lib/%{name}/cgroup.d/
-%{_var}/lib/%{name}/vztemplates
+%dir %{_var}/lib/%{name}/vztemplates
+%{_var}/lib/%{name}/vztemplates/README
 %{_var}/lib/%{name}/contrib/*
 %{_usr}/sbin/%{name}
-%{_prefix}/libexec/%{name}/vzstat
+%{_prefix}/libexec/%{name}/bin/vzstat
+%{_prefix}/libexec/%{name}/bin/vzmon
 %{_prefix}/libexec/%{name}/utilities/setcpu
 %{_prefix}/libexec/%{name}/utilities/tstavg
+%{_prefix}/libexec/%{name}/shell/%{name}.boot
+%{_prefix}/libexec/%{name}/shell/%{name}.boot.Alpine
+%{_prefix}/libexec/%{name}/shell/%{name}.boot.Debian
+%{_prefix}/libexec/%{name}/shell/%{name}.boot.Fedora
+%{_prefix}/libexec/%{name}/shell/%{name}.boot.Gentoo
+%{_prefix}/libexec/%{name}/shell/%{name}.boot.Osukiss
+%{_prefix}/libexec/%{name}/shell/%{name}.boot.Ubuntu
+%{_prefix}/libexec/%{name}/shell/%{name}.boot.Void
 %{_prefix}/libexec/%{name}/shell/%{name}.build
-%{_prefix}/libexec/%{name}/shell/%{name}.close
 %{_prefix}/libexec/%{name}/shell/%{name}.create
+%{_prefix}/libexec/%{name}/shell/%{name}.create.Alpine
+%{_prefix}/libexec/%{name}/shell/%{name}.create.Debian
+%{_prefix}/libexec/%{name}/shell/%{name}.create.Fedora
+%{_prefix}/libexec/%{name}/shell/%{name}.create.Gentoo
+%{_prefix}/libexec/%{name}/shell/%{name}.create.Osukiss
+%{_prefix}/libexec/%{name}/shell/%{name}.create.Ubuntu
+%{_prefix}/libexec/%{name}/shell/%{name}.create.Void
 %{_prefix}/libexec/%{name}/shell/%{name}.destroy
 %{_prefix}/libexec/%{name}/shell/%{name}.exec
 %{_prefix}/libexec/%{name}/shell/%{name}.freeze
-%{_prefix}/libexec/%{name}/shell/%{name}.fboot
-%{_prefix}/libexec/%{name}/shell/%{name}.fboot.redhat
-%{_prefix}/libexec/%{name}/shell/%{name}.fboot.debian
-%{_prefix}/libexec/%{name}/shell/%{name}.fboot.osukiss
+%config(noreplace) %{_prefix}/libexec/%{name}/shell/%{name}.eth.down
+%config(noreplace) %{_prefix}/libexec/%{name}/shell/%{name}.eth.up
 %{_prefix}/libexec/%{name}/shell/%{name}.list
+%{_prefix}/libexec/%{name}/shell/%{name}.offboot
+%{_prefix}/libexec/%{name}/shell/%{name}.onboot
 %{_prefix}/libexec/%{name}/shell/%{name}.online
-%{_prefix}/libexec/%{name}/shell/%{name}.open
-%{_prefix}/libexec/%{name}/shell/%{name}.net
 %{_prefix}/libexec/%{name}/shell/%{name}.movefrom
 %{_prefix}/libexec/%{name}/shell/%{name}.rebuild
-%{_prefix}/libexec/%{name}/shell/%{name}.start
 %{_prefix}/libexec/%{name}/shell/%{name}.standby
 %{_prefix}/libexec/%{name}/shell/vzctl.standby
+%{_sysconfdir}/%{name}/distributions/
 %dir %{_sysconfdir}/%{name}/sites_data
 %dir %{_sysconfdir}/%{name}/names
 %config(noreplace) %{_sysconfdir}/%{name}/vzgot_config

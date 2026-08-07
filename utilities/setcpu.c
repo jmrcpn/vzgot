@@ -30,6 +30,7 @@
 
 #include	"dbglog.h"
 #include	"lowtyp.h"
+#include	"lowapl.h"
 #include	"utlapl.h"
 #include	"utlprc.h"
 #include	"utlsys.h"

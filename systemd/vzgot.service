@@ -1,7 +1,7 @@
 [Unit]
-Description=Containers
-Wants=network.target
-After=network-pre.target systemd-sysctl.service
+Description=Vzgot Containers
+After=bird.service
+Requires=bird.service
 
 [Service]
 Type=oneshot

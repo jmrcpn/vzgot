@@ -236,15 +236,15 @@ PUBLIC _Bool prc_cnt_pids_current(const char *contname,uint32_t *pids_current)
 
 _Bool isok;
 FILE *fp;
-const char *sysfs;
+char sysfs[512];
 char line[100];
-char path[256];
+char path[1024];
 int phase;
 int proceed;
 
 isok=false;
 fp=(FILE *)0;
-sysfs=sys_get_sysfs(cgr_containers);
+(void) sys_get_sysfs(sysfs,sizeof(sysfs),cgr_containers);
 phase=0;
 proceed=true;
 while (proceed==true) {
@@ -311,15 +311,15 @@ PUBLIC _Bool prc_cnt_usage(const char *contname,u_vlong *usage)
 
 _Bool isok;
 FILE *fp;
-const char *sysfs;
+char sysfs[512];
 char line[100];
-char path[256];
+char path[1024];
 int phase;
 int proceed;
 
 isok=false;
 fp=(FILE *)0;
-sysfs=sys_get_sysfs(cgr_containers);
+(void) sys_get_sysfs(sysfs,sizeof(sysfs),cgr_containers);
 phase=0;
 proceed=true;
 while (proceed==true) {
@@ -378,15 +378,15 @@ PUBLIC _Bool prc_cnt_pressure(const char *contname,u_vlong *usage)
 
 _Bool isok;
 FILE *fp;
-const char *sysfs;
+char sysfs[512];
 char line[100];
-char path[256];
+char path[10124];
 int phase;
 int proceed;
 
 isok=false;
 fp=(FILE *)0;
-sysfs=sys_get_sysfs(cgr_containers);
+(void) sys_get_sysfs(sysfs,sizeof(sysfs),cgr_containers);
 phase=0;
 proceed=true;
 while (proceed==true) {
@@ -448,16 +448,16 @@ PUBLIC _Bool prc_setpidsmax(const char *contname,const char *valeur)
 _Bool isok;
 u_vlong sys_pid_max;
 long maxpid;
-const char *sysfs;
 double ratio;
-char ppath[200];
+char sysfs[512];
+char ppath[1024];
 int phase;
 _Bool proceed;
 
 isok=false;
 sys_pid_max=0;
 maxpid=MINMAX;
-sysfs=sys_get_sysfs(cgr_containers);
+(void) sys_get_sysfs(sysfs,sizeof(sysfs),cgr_containers);
 ratio=100.0;
 phase=0;
 proceed=true;
@@ -509,19 +509,19 @@ PUBLIC _Bool prc_setmemmax(const char *contname,const char *valeur,_Bool swap)
 _Bool isok;
 struct sysinfo info;
 double ratio;
-const char *sysfs;
+char sysfs[512];
 u_vlong totalmax;
 u_vlong totalswap;
 u_vlong memmax;
 u_vlong swapmax;
-char ppath[200];
+char ppath[1024];
 int phase;
 int proceed;
 
 isok=false;
 (void) memset(&info,'\000',sizeof(info));
 ratio=0.0;
-sysfs=sys_get_sysfs(cgr_containers);
+(void) sys_get_sysfs(sysfs,sizeof(sysfs),cgr_containers);
 totalmax=(u_vlong)0;
 totalswap=(u_vlong)0;
 memmax=(u_vlong)0;
@@ -604,11 +604,11 @@ PUBLIC _Bool prc_getcgroupmem(const char *contname,const char *mname,u_vlong *cg
 #define	MINMAX	32*ONEMEG		//32 Megs is the very minimal
 
 _Bool isok;
-const char *sysfs;
-char ppath[200];
+char sysfs[512];
+char ppath[1024];
 
 isok=false;
-sysfs=sys_get_sysfs(cgr_containers);
+(void) sys_get_sysfs(sysfs,sizeof(sysfs),cgr_containers);
 (void) snprintf(ppath,sizeof(ppath),"/%s/%s/%s",sysfs,contname,mname);
 isok=sys_read_sys_long(ppath,cgmem);
 return isok;
@@ -636,7 +636,7 @@ PUBLIC uint16_t prc_getnbrcpu(const char *contname)
 
 uint16_t nbr;
 FILE *fichier;
-const char *sysfs;
+char sysfs[512];
 char ppath[PATH_MAX];
 char data[200];
 
@@ -645,7 +645,7 @@ _Bool proceed;
 
 nbr=sysconf(_SC_NPROCESSORS_CONF);
 fichier=(FILE *)0;
-sysfs=sys_get_sysfs(cgr_containers);
+(void) sys_get_sysfs(sysfs,sizeof(sysfs),cgr_containers);
 (void) snprintf(ppath,sizeof(ppath),"/%s/%s/%s",
 				    sysfs,contname,"cpuset.cpus.effective");
 (void) memset(data,'\000',sizeof(data));
@@ -765,121 +765,6 @@ while (proceed==true) {
 	(void) log_alert(0,"%s Unable to scan data <%s> (Bug?)",OPEP,data);
 	isok=false;	//best is not always true
 	phase=999;
-	}
-      break;
-    default	:	//SAFE Guard
-      proceed=false;
-      break;
-    }
-  phase++;
-  }
-return isok;
-
-#undef	FMT
-#undef	OPEP
-}
-/*
-
-*/
-/************************************************/
-/*						*/
-/*	Procedure to retrieve the container	*/
-/*	last assigned PID (to have a good	*/
-/*	loadavg value).				*/
-/*						*/
-/************************************************/
-PUBLIC _Bool prc_get_last_pid(const char *contname,uint32_t *last_pid)
-
-{
-#define	OPEP	"utlprc.c:prc_get_last_pid"
-#define	FMT	"%s Unable to open <%s> (error=<%s> system?)"
-
-_Bool isok;
-FILE *fichier;
-const char *sysfs;
-uint32_t last_host_pid;
-char *err;
-char ppath[PATH_MAX];
-char line[100];
-int phase;
-_Bool proceed;
-
-isok=false;
-*last_pid=(uint32_t)0;
-fichier=(FILE *)0;
-sysfs=sys_get_sysfs(cgr_containers);
-last_host_pid=(uint32_t)0;
-err=(char *)0;
-(void) snprintf(ppath,sizeof(ppath),"/%s/%s/%s",sysfs,contname,"cgroup.procs");
-(void) memset(line,'\000',sizeof(line));
-phase=0;
-proceed=true;
-while (proceed==true) {
-  switch (phase) {
-    case 0	:	//reading file
-      if ((fichier=fopen(ppath,"r"))==(FILE *)0) {
-	(void) log_alert(0,FMT,OPEP,ppath,strerror(errno));
-	phase=999;	//trouble trouble
-	}
-      break;
-    case 1	:	//reading all line up to the end
-      while (fgets(line,sizeof(line),fichier)!=(char *)0);
-      if (line[0]=='\000') {
-	(void) log_alert(0,"%s Unable to extract data from <%s> (Bug?)",
-			    OPEP,ppath);
-	phase=999;	//trouble trouble
-	}
-      (void) fclose(fichier);
-      break;
-    case 2	:	//we have the HOST last pid
-      last_host_pid=strtol(line,&err,10);
-      if ((*err!='\000')&&(!isspace((unsigned char)*err))) {
-        (void) log_alert(0,"%s from <%s> unable to convert <%s> (system?)",
-			    OPEP,ppath,line);
-	phase=999;
-	}
-      break;
-    case 3	:	//Lets have the container pid
-      (void) memset(line,'\000',sizeof(line));
-      (void) snprintf(ppath,sizeof(ppath),"/proc/%u/status",last_host_pid);
-      if ((fichier=fopen(ppath,"r"))==(FILE *)0) {
-	(void) log_alert(0,FMT,OPEP,ppath,strerror(errno));
-	phase=999;	//trouble trouble
-	}
-      break;
-    case 4	:	//lets look for NSpid: line
-      while (fgets(line,sizeof(line),fichier)!=(char *)0) {
-	if (strncmp(line,"NSpid:",6)==0) {
-	  isok=true;
-	  //expected format is: "NSpid: <host_pid> <container_pid>"
-	  break;	//we found the right line
-	  
-	  }
-	}
-      (void) fclose(fichier);
-      if (isok==false) {
-	(void) log_alert(0,"%s Unable to find a \"NSpid:\" line (kernel? bug?)",
-			    OPEP);
-	phase=999;
-	}
-      break;
-    case 5	:	//so we got the right line
-      if (line[0]!='\000') {	//always
-	char *last_space;
-
-	(void) apl_cleanstring(line);	//remove '\n'
-	last_space=strrchr(line,'\t');	
-	if (last_space==(char *)0)
-	  last_space=strrchr(line,' ');
-	if (last_space!=(char *)0) {
-	  last_space++;
-          *last_pid=strtol(last_space,&err,10);
-          if ((*err!='\000')&&(!isspace((unsigned char)*err))) {
-            (void) log_alert(0,"%s from <%s> unable to convert <%s> (system?)",
-			       OPEP,ppath,line);
-	    isok=false;
-	    }
-	  }
 	}
       break;
     default	:	//SAFE Guard

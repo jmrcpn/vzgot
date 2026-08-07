@@ -1,0 +1,51 @@
+Source: @@APPN@@
+Section: admin
+Priority: optional
+Maintainer: @@PACKAGER@@ 
+Build-Depends: debhelper-compat (= 13), build-essential, libcap-dev
+Standards-Version: 4.6.2
+Homepage: https://github.com/jmrcpn/vzgot
+
+# --- Paquet Principal: vzgot ---
+Package: vzgot
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, 
+ 	bash,
+	bc,
+	bird2 | bird,
+	bridge-utils,
+	coreutils,
+	dnsutils,
+	gawk,
+	iproute2,
+	libcap2,
+	procps,
+	rsync,
+	sed,
+	util-linux
+Description: An application to drive linux container
+ vzgot is a set of tools to manage linux containers.
+ It allows running a wide range of distributions, as long as
+ their kernel is a Linux one.
+
+# --- Sous-paquet: vzgot-sysv ---
+Package: vzgot-sysv
+Architecture: all
+Depends: ${misc:Depends}, vzgot (= ${binary:Version}), sysvinit-utils
+Description: vzgot configuration file for sysV
+ This package allows using vzgot on a simple sysv (sysvinit)
+ linux system.
+
+# --- Sous-paquet: vzgot-systemd ---
+Package: vzgot-systemd
+Architecture: all
+Depends: ${misc:Depends}, vzgot (= ${binary:Version}), systemd
+Description: vzgot configuration file for systemd
+ This package allows using vzgot on a linux systemd system.
+
+# --- Sous-paquet: vzgot-apparmor ---
+Package: vzgot-apparmor
+Architecture: all
+Depends: ${misc:Depends}, vzgot (= ${binary:Version}), apparmor
+Description: vzgot configuration file to be used with apparmor
+ This package allows having vzgot with apparmor facilities.

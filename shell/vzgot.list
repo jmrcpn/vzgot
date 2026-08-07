@@ -14,40 +14,41 @@ affiche()
 #$6=HOMEFS
 #$7=NOTE
 
-CALLID=$1		#container call-ID
-NAME=$2			#container name
-BOOTSTAT=$3		#container boot status
-UPSTAT=$4		#container up or down
-IPADDR=$5		#container IP address
-HOMEFS=$6		#container home directory
-NOTE=$7
+NAME=$1			#container name
+BOOTSTAT=$2		#container boot status
+UPSTAT=$3		#container up or down
+IPADDR=$4		#container IP address
+HOMEFS=$5		#container home directory
+NOTE=$6
 
 taille=${#CALLID}
 tab1=`echo 25 - $taille | bc`
   
-printf "%s%15s  %*s%9s  %30s  %-30s  %s\n" "$CALLID" "$NAME" $tab1 "$BOOTSTAT" "$UPSTAT" "$IPADDR" "$HOMEFS" "$NOTE"
+printf "%s  %*s%9s  %30s  %-30s\n" "$NAME" $tab1 "$BOOTSTAT" "$UPSTAT" "$IPADDR" "$HOMEFS" 
+if [ -n "${NOTE}" ] ; then
+  printf "%-24s%s\n" "" "$NOTE"
+  fi
 }
 
 #----------------------------------------------------
 CONFDIR=/etc/vzgot
-affiche	"CallID " "Name" "Boot_mode"  "running" "IP num" "home directory"
+affiche	"Name" "Boot_mode"  "running" "IP num" "home directory"
 for cont in `ls $CONFDIR/names`
   do
-  CALLID=$cont
+  CALLID=${cont}
   NAME=""
   ONBOOT=""
   HOMEFS=""
   NOTE=""
   . $CONFDIR/names/$cont
-  DOMAIN=`dnsdomainname`
-  IPADDR=`getent hosts $NAME.$DOMAIN | cut -d ' ' -f1`
+  IPADDR=`getent hosts ${FULLNAME} | cut -d ' ' -f1`
   UPSTAT="Down"
   if [ -f $HOMEFS/first.pid ] ; then
-    CONTPID=`cat $HOMEFS/first.pid`
-    if [ -n "$CONTPID" -a -e /proc/$CONTPID ] ; then
+    CONTPID=`cat ${HOMEFS}/first.pid`
+    if [ -n "${CONTPID}" -a -e /proc/${CONTPID} ] ; then
       UPSTAT="Up"
       fi
     fi
-  affiche $CALLID $NAME $ONBOOT $UPSTAT $IPADDR $HOMEFS "$NOTE"
+  affiche ${NAME} ${ONBOOT} ${UPSTAT} ${IPADDR} ${HOMEFS} "${NOTE}"
   done
 exit 0

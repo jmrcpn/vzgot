@@ -1,0 +1,20 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	# Génération du fichier de date comme dans le .spec
+	date > vzgot.build_date
+	# Appel de la compilation avec la cible 'prod'
+	dh_auto_build -- prod
+
+override_dh_auto_install:
+	# Création forcée des dossiers vides requis par le .spec
+	mkdir -p debian/tmp/etc/vzgot/sites_data
+	mkdir -p debian/tmp/etc/vzgot/names
+	mkdir -p debian/tmp/vzgot
+	# Installation globale dans le répertoire temporaire de debhelper
+	dh_auto_install -- DESTDIR=debian/tmp				\
+	       		   INITDIR=/etc/init.d				\
+			   SYSTEMD=/lib/systemd

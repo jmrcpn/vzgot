@@ -1,0 +1,174 @@
+#! /usr/bin/bash
+#----------------------------------------------------
+#shell used to prepare container rootfs according
+#distribution type
+#
+#----------------------------------------------------
+#Syntaxe
+#vzgot.fistboot cont_name domain ip_list [Base]
+#	cont_name is the container name
+#	Domain is the container domainname 
+#	IP_LIST is an ip list (ip,ip1,ip2,..) used
+#		to prepare container network
+#----------------------------------------------------
+CONTNAME=$1
+DOMAIN=$2
+LSTIP=$3
+#----------------------------------------------------
+#extracting configuration
+CONFDIR=/etc/vzgot
+if ! [ -f ${CONFDIR}/vzgot_config ] ; then
+  echo "Missing vzgot config file"
+  exit 1	#trouble trouble
+  fi
+
+. ${CONFDIR}/vzgot_config
+
+. ${CONFDIR}/names/${CONTNAME}
+
+if [ -z "${HOMEFS}" ] ; then 
+  echo "Missing ${CONTNAME} HOMEFS variable"
+  exit 1	#trouble trouble
+  fi
+
+CONTDIR=${HOMEFS}
+#specific container configuration override (if needed)
+if [ -f ${CONTDIR}/vzgot_config ] ; then
+  ${CONTDIR}/vzgot_config
+  fi
+#----------------------------------------------------
+VZROOT=${CONTDIR}/rootfs
+#====================================================
+#procedure to implement Debian distribution file
+#----------------------------------------------------
+#Prepare /etc/hosts file
+HOSTS="/${VZDIR}/${CONTNAME}/rootfs/etc/hosts"
+(
+echo "#----------------------------------------------------"
+echo "#done by vzgot.fboot"
+echo "#----------------------------------------------------"
+echo -e "127.0.0.1\tlocalhost.localdomain\tlocalhost"
+) > ${HOSTS}
+
+if [ -n "${LSTIP}" ] ; then
+  (
+  IPV4=`echo ${LSTIP} | tr ',' ' ' | cut -d' ' -f1`
+  echo -e "${IPV4}\t\t\t${CONTNAME}.${DOMAIN}\t\t${CONTNAME}"
+  echo -e "${NETIP6}::${IPV4}\t${CONTNAME}.${DOMAIN}\t\t${CONTNAME}"
+  echo "#----------------------------------------------------"
+  ) >> ${HOSTS}
+  fi
+
+#----------------------------------------------------
+#set container hostname
+HOSTNAME="${VZROOT}/etc/hostname"
+(
+echo "${CONTNAME}.${DOMAIN}"
+) > ${HOSTNAME}
+
+#setting the DNS resolver using the Host resolv.conf
+if [ -f /etc/resolv.conf ] ; then
+  rm -f ${VZROOT}/etc/resolv.conf
+  cp -a /etc/resolv.conf ${VZROOT}/etc/resolv.conf
+  fi
+
+#----------------------------------------------------
+#set network in manual mode
+NDIR=${VZROOT}/etc/systemd/network/
+INTER=${NDIR}/80-container-eth0.network
+
+if [ -n ${LSTIP} ] ; then
+  ETH0=`echo ${LSTIP} | tr ',' ' ' | cut -d' ' -f1`
+  (
+  echo ""
+  echo "#----------------------------------------------------"
+  echo "# vzgot Network Initialization"
+  echo "#----------------------------------------------------"
+  echo "[Match]"
+  echo "Name=eth0"
+  echo ""
+  echo "[Network]"
+  echo "Address=${ETH0}/32"
+  echo ""
+  echo "[Route]"
+  echo "Destination=192.0.2.1/32"
+  echo "Scope=link"
+  echo ""
+  echo "[Route]"
+  echo "Gateway=192.0.2.1"
+  echo "GatewayOnLink=true"
+  echo ""
+  ) >> ${INTER}
+ fi
+
+mv ${NDIR}/eth0.network ${NDIR}/eth0.network.disabled
+
+#----------------------------------------------------
+#Prepare directoy /etc/fstab
+FSTAB="${VZROOT}/etc/fstab"
+(
+echo -e "/$CONTNAME\t\t/\t\t\text4\tdefaults\t\t0 0"
+echo -e "proc\t\t/proc\t\t\tproc\tdefaults\t\t0 0"
+echo -e "sysfs\t\t/sys\t\t\tsysfs\tdefaults\t\t0 0"
+echo -e "tmpfs\t\t/dev\t\t\ttmpfs\tsize=10k\t\t0 0"
+echo -e "devpts\t\t/dev/pts\t\tdevpts\trw,noexec,nosuid,mode=0620\t0 0"
+echo -e "tmpfs\t\t/run\t\ttmpfs\tdefaults\t\t0 0"
+) > $FSTAB
+
+#to get mounted partition data
+ln -snf /proc/mounts ${VZROOT}/etc/mtab
+
+#====================================================
+#limiting access to root account
+sed -i 's/^root:[^:]*/root:*/' ${VZROOT}/etc/shadow
+sed -i -e "s:/bin/sh:/usr/bin/bash:" ${VZROOT}/etc/passwd
+   
+#====================================================
+#avoiding firstboot
+chroot "${VZROOT}" systemd-id128 new > "${VZROOT}/etc/machine-id"
+
+#Default working mode is multi-user
+ln -sf	/usr/lib/systemd/system/multi-user.target	\
+	${VZROOT}/etc/systemd/system/default.target
+
+#removing the OOMD task
+ln -sf /dev/null "${VZROOT}/etc/systemd/system/systemd-oomd.service"
+ln -sf /dev/null "${VZROOT}/etc/systemd/system/systemd-oomd.socket"
+
+#do not care about /dev/kmsg
+mkdir -p "${VZROOT}/etc/systemd/journald.conf.d"
+cat << 'EOF' > "${VZROOT}/etc/systemd/journald.conf.d/no-kmsg.conf"
+[Journal]
+ReadKMsg=no
+EOF
+
+#====================================================
+#removing getty service
+ln -sf /dev/null "${VZROOT}/etc/systemd/system/getty.target"
+ln -sf /dev/null "${VZROOT}/etc/systemd/system/getty@.service"
+ln -sf /dev/null "${VZROOT}/etc/systemd/system/serial-getty@.service"
+ln -sf /dev/null "${VZROOT}/etc/systemd/system/container-getty@.service"
+
+#removing kernel-debug-mount service
+ln -sf /dev/null "${VZROOT}/etc/systemd/system/sys-kernel-debug.mount"
+
+#removing automount
+ln -sf /dev/null "${VZROOT}/etc/systemd/system/proc-sys-fs-binfmt_misc.automount"
+ln -sf /dev/null "${VZROOT}/etc/systemd/system/proc-sys-fs-binfmt_misc.mount"
+ln -sf /dev/null "${VZROOT}/etc/systemd/system/sys-kernel-tracing.mount"
+ln -sf /dev/null "${VZROOT}/etc/systemd/system/systemd-remount-fs.service"
+
+#====================================================
+#adding default iptables
+#activating service
+mkdir -p "${VZROOT}/etc/systemd/system/multi-user.target.wants"
+ln -sf \
+  "/usr/lib/systemd/system/iptables.service" \
+  "${VZROOT}/etc/systemd/system/multi-user.target.wants/iptables.service"
+
+mkdir -p "${VZROOT}/etc/sysconfig/"
+cp -a ${VZ_DATA_LIB}/etc/sysconfig/iptables	\
+      ${VZROOT}/etc/sysconfig/iptables
+
+#====================================================
+exit 0

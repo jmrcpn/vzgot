@@ -10,7 +10,7 @@ BINOME=$1
 CONTAINER=$2		#Can be empty
 #----------------------------------------------------
 ETCVZGOT=/etc/vzgot
-CONFDIR=$ETCVZGOT
+CONFDIR=${ETCVZGOT}
 
 SNAP=`hostname -s`
 . ${CONFDIR}/vzgot_config
@@ -29,59 +29,61 @@ for tocheck in $(IFS=','; echo $CONTAINER)
     echo -e "'$cont'\t already up and running on localhost=`hostname`"	
     continue
     fi
-  NAME=`ssh $BINOME "vzgot list | grep '^$cont ' | tr -s ' ' | cut -d ' ' -f2"`
-  if [ -z "$NAME" ] ; then
+  NAME=`ssh ${BINOME} "vzgot list | grep '^$cont ' | tr -s ' ' | cut -d ' ' -f1"`
+  if [ -z "${NAME}" ] ; then
     echo -e "'$cont'\t is not existing on remote system, exiting!"
     exit 1;
     fi
-  POOL=`zfs get -H quota | grep  "/$NAME	"`
+  POOL=`zfs get -H quota | grep  "/${NAME}	"`
   if [ -z "${POOL}" ] ; then
-    echo "Creating new container $NAME"
-    zfs create ${ZFSPOOL}/$NAME
+    echo "Creating new container ${NAME}"
+    zfs create ${ZFSPOOL}/${NAME}
     fi
-  POOL=`zfs list | grep "/$NAME$" | cut -d '/' -f1`
+  POOL=`zfs list | grep "/${NAME}$" | cut -d '/' -f1`
   #------------------------------------------------------------------
   #setting the local context
-  rsync -a $BINOME:$ETCVZGOT/names/$cont $CONFDIR/names
-  . $CONFDIR/names/$cont
-  RPOOL=`ssh $BINOME "df | grep '/$NAME ' | cut -d ' ' -f1"`
-  QUOTA=`ssh $BINOME "zfs get quota -H ${RPOOL} | tr '\t' ' ' | cut -d ' ' -f3"`
-  mkdir -p `dirname $HOMEFS`
-  zfs set quota=${QUOTA} mountpoint=$HOMEFS ${POOL}/$NAME
+  rsync -a ${BINOME}:$ETCVZGOT/names/$cont ${CONFDIR}/names
+  . ${CONFDIR}/names/$cont
+  RPOOL=`ssh ${BINOME} "df | grep '/${NAME} ' | cut -d ' ' -f1"`
+  QUOTA=`ssh ${BINOME} "zfs get quota -H ${RPOOL} | tr '\t' ' ' | cut -d ' ' -f3"`
+  mkdir -p `dirname ${HOMEFS}`
+  zfs set quota=${QUOTA} mountpoint=${HOMEFS} ${POOL}/${NAME}
   #------------------------------------------------------------------
   #preparing data transfer
-  ssh $BINOME "zfs snapshot ${RPOOL}@$SNAP; mkdir -p /vzgot/snapshot/$NAME"
-  ssh $BINOME "mount -t zfs ${RPOOL}@$SNAP /vzgot/snapshot/$NAME"
+  ssh ${BINOME} "zfs snapshot ${RPOOL}@${SNAP};			\
+	         mkdir -p /vzgot/snapshot/${SNAP}_${NAME}"
+  ssh ${BINOME} "mount -t zfs ${RPOOL}@${SNAP} /vzgot/snapshot/${SNAP}_${NAME}"
   #------------------------------------------------------------------
   #data transfer
   rsync -a						\
 	-e "ssh -x -T -c aes128-ctr -o Compression=no"	\
 	--delete					\
 	--numeric-ids					\
-	$BINOME:/vzgot/snapshot/$NAME/*			\
-	$HOMEFS
-  rm -fr $HOMEFS/first.pid
+	${BINOME}:/vzgot/snapshot/${SNAP}_${NAME}/*	\
+	${HOMEFS}
+  rm -fr ${HOMEFS}/first.pid
   #------------------------------------------------------------------
   #closing data transfer
-  ssh $BINOME "umount /vzgot/snapshot/$NAME"
-  ssh $BINOME "zfs destroy ${RPOOL}@$SNAP"
+  ssh ${BINOME} "umount /vzgot/snapshot/${SNAP}_${NAME}"
+  ssh ${BINOME} "zfs destroy ${RPOOL}@$SNAP"
+  ssh ${BINOME} "rm -fr /vzgot/snapshot/${SNAP}_${NAME}"
   #------------------------------------------------------------------
   #setting update Stamp
-  . $CONFDIR/names/$cont
+  . ${CONFDIR}/names/$cont
   if [ -z "$NOTE" ] ; then
-    echo "NOTE=\"Standby update\"" >> $CONFDIR/names/$cont
+    echo "NOTE=\"Standby update\"" >> ${CONFDIR}/names/$cont
     fi
   sed -i								\
-    -e "s/^NOTE=.*$/NOTE=\"Last update from $BINOME at `date -R`\"/g"	\
+    -e "s/^NOTE=.*$/NOTE=\"Last update from ${BINOME} at `date -R`\"/g"	\
     -e "s/^ONBOOT=.*$/ONBOOT=\"Standby\"/g"				\
-    $CONFDIR/names/$cont
+    ${CONFDIR}/names/$cont
   #------------------------------------------------------------------
   #final report
-  USED=`df -h $HOMEFS | grep $HOMEFS | tr -s ' ' | cut -d ' ' -f3`
+  USED=`df -h ${HOMEFS} | grep ${HOMEFS} | tr -s ' ' | cut -d ' ' -f3`
   printf "%10s %-20s Standby Ready %-10s %s\n"				\
 	 	 `date +%T`						\
 		 $cont							\
 		 $QUOTA/$USED						\
-		 $HOMEFS
+		 ${HOMEFS}
   done
 exit 0

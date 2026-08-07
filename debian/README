@@ -1,0 +1,5 @@
+#To make debian package, within the source directory (./debian) 
+#execute the following command
+dpkg-buildpackage -us -uc -b
+#and install package (use the propoer version number)
+apt install ./vzgot_26.07.154-0_amd64.deb ./vzgot-systemd_26.07.154-0_all.deb

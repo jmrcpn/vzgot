@@ -31,6 +31,7 @@
 #include	<sys/wait.h>
 
 #include	"dbglog.h"
+#include	"lowapl.h"
 #include	"lowtyp.h"
 #include	"utlapl.h"
 #include	"utlprc.h"
@@ -40,6 +41,8 @@
 #include	"unilck.h"
 
 #define TSTONL  "tstonl"
+
+#define PRG     "tstonl.c"
 
 /*
 
@@ -79,9 +82,12 @@ static void usage()
 int main(int argc,char *argv[])
 
 {
+#define OPEP    PRG":main"
+
 #define PACE 5.0
 
 int status;
+pid_t cont_pid;
 char c;
 const char *contname;
 TPLPTR *tpl;
@@ -89,6 +95,8 @@ char *confdir;
 _Bool proceed;
 int phase;
 
+status=0;
+cont_pid=(pid_t)0;
 appname=TSTONL;
 tpl=(TPLPTR *)0;
 confdir=(char *)0;
@@ -132,20 +140,27 @@ while (proceed==true) {
       if (cfg_loadconfig(confdir,contname)!=0) 
         phase=999;      //Unable to load container configuration?
       break;
-    case 2      :       //loading the container
-      if ((tpl=cfg_open_online(confdir,contname,getenv(ONLINETPL)))==(TPLPTR *)0) {
-        (void) log_alert(0,"%s unable to open <%s> template within config",
-                            appname,getenv(ONLINETPL));
+    case 2      :       //getting the container pid
+      if ((cont_pid=cnt_get_cont_pid(contname))==(pid_t)0) {
+        (void) log_alert(0,"%s container <%s> is not found up and running",
+                            OPEP,contname);
         phase=999;      //trouble trouble
         }
       break;
-    case 3      :       //display online information
-      (void) cfg_update_online(contname,tpl);
+    case 3      :       //loading the container
+      if ((tpl=cfg_open_online(confdir,cont_pid,getenv(ONLINETPL)))==(TPLPTR *)0) {
+        (void) log_alert(0,"%s unable to open <%s> template within config",
+                            OPEP,getenv(ONLINETPL));
+        phase=999;      //trouble trouble
+        }
       break;
     case 4      :       //display online information
+      (void) cfg_update_online(contname,tpl);
+      break;
+    case 5      :       //display online information
       (void) cfg_flush_online(stdout,tpl);
       break;
-    case 5      :       //closing the tpl structure
+    case 6      :       //closing the tpl structure
       tpl=cfg_close_online(tpl);
       break;
     default     :       //SAFE Guard
@@ -160,4 +175,6 @@ argv=prc_cleantitle();
 (void) apl_settrap(false);
 (void) apl_trapsegv(false);
 exit(status);
+
+#undef  OPEP
 }

@@ -1,27 +1,9 @@
+// vim: smarttab tabstop=8 shiftwidth=2 expandtab
 /************************************************/
 /*						*/
 /*      Copyright:				*/
-/*	 Jean-Marc Pigeon <jmp@safe.ca>	 2009	*/
+/*	Jean-Marc Pigeon <jmp@safe.ca>	 2009	*/
 /*						*/
-/************************************************/
-/* This program is free software; you can 	*/
-/* redistribute it and/or modify it under the 	*/
-/* terms of the GNU General Public License as	*/
-/* published by the Free Software Foundation	*/
-/* version 2 of the License			*/
-/*						*/
-/* This program is distributed in the hope that */
-/* it will be useful, but WITHOUT ANY WARRANTY; */
-/* without even the implied warranty of		*/
-/* MERCHANTABILITY or FITNESS FOR A PARTICULAR	*/
-/* PURPOSE.  See the GNU General Public License	*/
-/* for more details.				*/
-/*						*/
-/* You should have received a copy of the GNU	*/
-/* General Public License along with this 	*/
-/* program; if not, write to the Free Software	*/
-/* Foundation, Inc., 51 Franklin Street,	*/
-/* Fifth Floor, Boston, MA  02110-1301, USA.	*/
 /************************************************/
 /*						*/
 /*	UNILCK:					*/
@@ -40,6 +22,7 @@
 #include	<syslog.h>
 #include	<unistd.h>
 
+#include	"lowapl.h"
 #include	"lowtyp.h"
 #include	"dbglog.h"
 #include	"utlapl.h"
@@ -189,7 +172,7 @@ while (proceed==true) {
 			     ident,getpid(),"(Unable to lock! bug?)");
 	(void) flock(handle,LOCK_UN);
 	(void) close(handle);
-	(void) log_alert(1,"container <%s> process pid '%06d' now locked",
+	(void) log_alert(2,"container <%s> process pid '%06d' now locked",
 			   ident,getpid());
 	done=true;
   	} 

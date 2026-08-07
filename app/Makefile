@@ -11,6 +11,7 @@ prod	:
 	  @ $(MAKE)						\
 		OPTIME="-ggdb3 -D_FORTIFY_SOURCE=2 -O2"		\
 		exe
+	  @ strip $(EXE) $(STA)
 
 #version to be used with gdb in live test system
 withgdb	:
@@ -19,18 +20,23 @@ withgdb	:
 		exe
 
 exe	: $(VZLIB)
-	  $(MAKE) $(EXE)
-	
+	  $(MAKE) $(EXE) $(STA)
+
+
 clean	:
-	  @ - rm -fr *.o $(EXE) *~ 
+	  @ - rm -fr *.o $(EXE) $(STA) *~ 
 
 #--------------------------------------------------------------------
 #Executable file to do
-EXE=								\
-	vzgot 							\
+STA	=							\
+	vzmon							\
+
+EXE	=							\
+	vzgot							\
 	vzstat
 
-OBJS=								\
+OBJS	=							\
+	vzmon.o							\
 	vzgot.o							\
 	vzstat.o
 
@@ -40,8 +46,16 @@ VZLIB= ../lib/vzlb.a
 
 $(EXE)	:  $(OBJS) $(VZLIB)
 	   @ $(LD) $(LDFLAGS) -o $@ $@.o $(LIBS)
+
+$(STA)	:  $(OBJS) $(VZLIB)
+	   $(LD) $(LDFLAGS) -static-pie -o $@ $@.o $(LIBS)
+
 #--------------------------------------------------------------------
+vzmon.o	:							\
+	   vzmon.c
+
 vzgot.o	:	  						\
+	   ../lib/lowapl.h					\
 	   ../lib/lowtyp.h					\
 	   ../lib/utlapl.h					\
 	   ../lib/utlapp.h					\
@@ -49,12 +63,15 @@ vzgot.o	:	  						\
 	   ../lib/utlsys.h					\
 	   ../lib/utlvec.h					\
 	   ../lib/subcfg.h					\
+	   ../lib/subprc.h					\
 	   ../lib/unicfg.h					\
 	   ../lib/unilck.h					\
 	   ../lib/unicnt.h					\
+	   ../lib/unimon.h					\
 	   vzgot.c
 
 vzstat.o:	  						\
+	   ../lib/lowapl.h					\
 	   ../lib/lowtyp.h					\
 	   ../lib/utlapl.h					\
 	   ../lib/utlprc.h					\

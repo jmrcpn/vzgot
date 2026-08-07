@@ -1,3 +1,4 @@
+// vim: smarttab tabstop=8 shiftwidth=2 expandtab
 /************************************************/
 /*						*/
 /*	Define utility level procedure to handle*/
@@ -16,8 +17,6 @@
 #define	NUMCPU	"NUMCPU"
 #define	MAXCPU	"MAXCPU"
 #define	PWRCPU	"PWRCPU"
-
-#define	INFODIR	"infos"		//container live data directory
 
 //extensions definition por /sys/fs/crgroup/vzgot
 typedef enum	{
@@ -110,14 +109,24 @@ typedef	struct	{
 	NETINF	network[2];	// Host, Container network information	
 	}STATYP;
 
+//procedure to extract the container last assigned pid
+extern _Bool sys_get_last_pid(const char *cont_name,pid_t *last_pid);
+
+//procedure to get the container own working directory
+extern const char *sys_get_cont_path(const char *cont_name);
+
 //to display namespace owner ship
 extern void sys_show_namespace();
 
-//to detach descripteur vhen a chlild is open
+//to detach descripteur when a child is open
 extern _Bool sys_detach_from_supervisor(char *contname);
 
 //to get the SYSFS value
-extern const char *sys_get_sysfs(CGRENU ext);
+extern char *sys_get_sysfs(char *path,size_t taille,CGRENU ext);
+
+//to remove all contents of cgroup directoy
+extern _Bool sys_clean_all_cgroup(const char *contname,CGRENU ext);
+
 
 //to read a value from system
 extern _Bool sys_read_sys_long(const char *path,u_vlong *result);
@@ -128,8 +137,11 @@ extern _Bool sys_read_sys_long(const char *path,u_vlong *result);
 //to write a value to system
 extern _Bool sys_write_sys_long(const char *path,u_vlong tostore);
 
+//to write a string to system
+extern _Bool sys_write_str(const char *full_path,char *str);
+
 //move the process to another cgroup
-extern _Bool sys_move_to_cgroup(const char *contname,CGRENU ext);
+extern _Bool sys_move_to_cgroup(const char *contname,CGRENU ext,pid_t pid);
 
 //to return MEMINFO contents as string like "used/max Kb"
 extern const char *sys_meminf_printf(MEMINF *mems);
@@ -149,12 +161,11 @@ extern _Bool sys_get_cpu_host_list(PHYCPU *cpuslist);
 //procedure to get the container current CPU assignment
 extern _Bool sys_get_cpu_cont_list(PHYCPU *cpuslist);
 
+//procedure to attache container to cgroup
+extern _Bool sys_attach_to_cgroup(const char *contname,pid_t cpid);
+
 //procedure to pin the namespace
 extern _Bool sys_pin_cgroup_ns(pid_t cpid);
-
-//OBSOLETE!!
-//procedure to set the prepare the subtree_control
-//extern _Bool sys_set_cont_subtree_control(const char *contname);
 
 //procedure to set the limite CPU usage the hard-way
 extern _Bool sys_set_cont_usage(const char *contname,double ratio);
@@ -174,23 +185,23 @@ extern char *sys_get_cont_ceiling(const char *contname);
 //procedure to get the container cpu usage values
 extern _Bool sys_get_cpustat(CPUENU cpuenu,STATYP *status);
 
-//procedure to return the cpu idle ration
+//procedure to return the cpu idle ratio
 extern double sys_get_cpu_idle(STATYP *status);
 
-//procedure to write the container starting time within an start file
-extern _Bool sys_set_start(pid_t contpid);
+//procedure to set the container boot time
+extern _Bool sys_set_boot_time();
 
-//procedure to read the container starting time 
-extern _Bool sys_get_start(pid_t *contpid,u_vlong *start);
+//procedure to write the container starting time within an start file
+extern _Bool sys_set_start();
 
 //procedure to return the host loadavg values
 extern _Bool sys_get_host_loadavg(double *avgs,u_int taille);
 
 //procedure to return a string about calculate the load average
-extern _Bool sys_cal_loadavg(STATYP *status);
+//extern _Bool sys_cal_loadavg(STATYP *status);
 
 //procedure to create a new container status structure with inital values
-extern STATYP *sys_new_cont_status();
+extern STATYP *sys_new_cont_status(pid_t cont_pid);
 
 //procedure to update critical status data
 extern _Bool sys_update_cont_status(STATYP *status);
@@ -200,4 +211,11 @@ extern STATYP *sys_free_cont_status(STATYP *status);
 
 //procedure to assign the random seed;
 extern _Bool sys_set_random_seed();
+
+//procedure to check if a file is bind to another
+extern _Bool sys_check_remount(const char *src,const char *tgt);
+
+//create an snoynymous file
+extern int sys_get_memfd(const char *path,const char *memname);
+
 #endif

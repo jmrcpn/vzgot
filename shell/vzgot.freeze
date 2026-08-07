@@ -29,8 +29,10 @@ chmod 750 $SITEDATA/$1
 #probing common critical data
 rsync						\
 	-a					\
+	-L					\
 	$HOMEFS/rootfs/etc/sysconfig		\
 	$HOMEFS/rootfs/etc/openssh		\
+	$HOMEFS/rootfs/etc/ssh			\
 	$HOMEFS/rootfs/etc/group		\
 	$HOMEFS/rootfs/etc/passwd		\
 	$HOMEFS/rootfs/etc/pki			\

@@ -1,0 +1,15 @@
+#!/bin/sh
+set -e
+
+if [ "$1" = "remove" ]; then
+    systemctl stop vzgot.service >/dev/null || true
+    systemctl disable vzgot.service >/dev/null || true
+    systemctl daemon-reload >/dev/null || true
+    if systemctl is-active --quiet NetworkManager; then
+        systemctl reload NetworkManager.service || true
+        systemctl restart NetworkManager.service || true
+    fi
+fi
+
+#DEBHELPER#
+exit 0

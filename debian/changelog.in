@@ -1,0 +1,4 @@
+@@APPN@@ (@@VERSION@@-@@RELEASE@@) upstream-release; urgency=medium
+
+  * Automated build from spec-file infrastructure.
+ -- @@PACKAGER@@  @@DATE@@

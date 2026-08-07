@@ -39,23 +39,6 @@
 /*transit subdirectory name			*/
 #define	TSUFFIX	"-S"
 
-/*defining application directory		*/
-typedef	enum	{
-	d_tmp,		/*directory /tmp	*/
-	d_crash,	/*the crash directory	*/
-	d_etc,		/*directory is /etc	*/
-	d_ubin,		/*directory /usr/bin	*/
-	d_usbin,	/*directory /usr/sbin	*/
-	d_usrlib,	/*directory /usr/lib	*/
-	d_libexec,	/*directory /usr/libexec*/
-	d_varlib,	/*directory /var/lib	*/
-	d_spool,	/*spool directory	*/
-	d_log,		/*logs directory 	*/
-	d_lock,		/*locking directory	*/
-	d_vzgot,	/*application main dir	*/
-	d_null		/*no directoy specified	*/
-	}DIRENUM;
-
 typedef	struct	{	/*vocable table type	*/
 	int code;	/*code value		*/
 	const char *key;/*key code		*/
@@ -63,18 +46,16 @@ typedef	struct	{	/*vocable table type	*/
 	}VOCTYP;
 
 /*Signal flag definition			*/
-extern 	int sigterm;
-extern 	int sigquit;
-extern 	int sigint;
 extern 	int sigcont;
+extern 	int sighup;
+extern 	int sigint;
+extern 	int sigquit;
+extern 	int sigterm;
 
 /*application current version number		*/
 extern const char *curvers;
-/*application name				*/
-extern char *appname;
 
 extern int apl_isdir(char *dirpath);
-extern char *apl_freestr(char *str);
 extern const char *apl_getvers();
 extern u_long apl_getmillisec();
 extern char *apl_uniquename(unsigned int seq);
@@ -92,7 +73,6 @@ extern char *apl_ascsysdatetime(time_t curtime);
 extern char *apl_ascsysstamp(time_t curtime);
 extern time_t apl_datetimesysasc(char *strdate,char *strtime);
 extern void apl_argvtrace(const int dlevel,const char *fmt,char *argv[]);
-extern char *apl_appdir(DIRENUM dir);
 extern void apl_trapsegv(int onoff);
 extern void apl_core_dump(char *frmt, ...);
 extern void apl_settrap(int set);
@@ -110,7 +90,7 @@ extern int apl_checksig();
 //procedure to convert a string to an (expected) double
 extern double apl_getdouble(const char *valeur);
 
-//procedure to find the application default directory
+//procedure to find the application confing default directory
 extern const char *apl_dfltconfdir();
 
 #endif

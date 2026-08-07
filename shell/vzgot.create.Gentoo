@@ -1,0 +1,164 @@
+#! /usr/bin/bash
+#----------------------------------------------------
+#shell used to prepare container rootfs according
+#distribution type
+#
+#----------------------------------------------------
+#Syntaxe
+#vzgot.fistboot cont_name domain ip_list [Base]
+#	cont_name is the container name
+#	Domain is the container domainname 
+#	IP_LIST is an ip list (ip,ip1,ip2,..) used
+#		to prepare container network
+#----------------------------------------------------
+CONTNAME=$1
+DOMAIN=$2
+LSTIP=$3
+#----------------------------------------------------
+#extracting configuration
+CONFDIR=/etc/vzgot
+if ! [ -f ${CONFDIR}/vzgot_config ] ; then
+  echo "Missing vzgot config file"
+  exit 1	#trouble trouble
+  fi
+
+. ${CONFDIR}/vzgot_config
+
+. ${CONFDIR}/names/${CONTNAME}
+
+if [ -z "${HOMEFS}" ] ; then 
+  echo "Missing ${CONTNAME} HOMEFS variable"
+  exit 1	#trouble trouble
+  fi
+
+CONTDIR=${HOMEFS}
+#specific container configuration override (if needed)
+if [ -f ${CONTDIR}/vzgot_config ] ; then
+  ${CONTDIR}/vzgot_config
+  fi
+#----------------------------------------------------
+VZROOT=${CONTDIR}/rootfs
+#====================================================
+#procedure to implement Alpine distribution file
+#----------------------------------------------------
+#Preparing  container /etc/hosts file
+#----------------------------------------------------
+
+HOSTS="${VZROOT}/etc/hosts"
+(
+echo "#----------------------------------------------------"
+echo "#done by vzgot.fboot"
+echo "#----------------------------------------------------"
+echo -e "127.0.0.1\tlocalhost.localdomain\tlocalhost"
+) > $HOSTS
+
+if [ -n $LSTIP ] ; then
+  (
+  echo -n `echo $LSTIP | tr ',' ' ' | cut -d' ' -f1`
+  echo -e "\t${CONTNAME}.$DOMAIN\t\t${CONTNAME}"
+  echo "#----------------------------------------------------"
+  ) >> $HOSTS
+  fi
+#----------------------------------------------------
+HOSTNAME="${VZROOT}/etc/hostname"
+(
+echo "${CONTNAME}.$DOMAIN"
+) > $HOSTNAME
+
+#----------------------------------------------------
+#set network in manual mode
+INTER=${VZROOT}/etc/conf.d/net
+if [ -n $LSTIP ] ; then
+  ETH0=`echo $LSTIP | tr ',' ' ' | cut -d' ' -f1`
+  (
+  echo "#----------------------------------------------------"
+  echo "# vzgot Network Initialization"
+  echo "#----------------------------------------------------"
+  echo "config_eth0=\"$ETH0/32\""
+  echo "routes_eth0=\""
+  echo "192.0.2.0/24 dev eth0 scope link"
+  echo "default via 192.0.2.1 dev eth0"
+  echo "\""
+  echo "#----------------------------------------------------"
+  ) >> ${INTER}
+  fi
+
+#----------------------------------------------------
+#inserting iptables rules
+#adding default iptables
+cp -a ${VZ_DATA_LIB}/etc/sysconfig/iptables	\
+	${VZROOT}//var/lib/iptables/rules-save
+ln -sf 						\
+	/etc/init.d/iptables			\
+       	"${VZROOT}/etc/runlevels/boot/iptables"
+
+#====================================================
+#----------------------------------------------------
+#Prepare /dev directoy contents
+DEV="${VZROOT}/dev"
+#MOTHING specific to be added to container /dev
+
+#----------------------------------------------------
+FSTAB="${VZROOT}/etc/fstab"
+(
+echo -e "/$CONTNAME\t\t/\t\t\text4\tdefaults\t\t0 0"
+echo -e "proc\t\t/proc\t\t\tproc\tdefaults\t\t0 0"
+echo -e "sysfs\t\t/sys\t\t\tsysfs\tdefaults\t\t0 0"
+echo -e "devpts\t\t/dev/pts\t\tdevpts\trw,noexec,nosuid,mode=0620\t0 0"
+echo -e "tmpfs\t\t/run\t\ttmpfs\tdefaults\t\t0 0"
+) > $FSTAB
+
+#to get mounted partition data
+ln -snf /proc/mounts ${VZROOT}/etc/mtab
+
+#setting the DNS resolver
+if [ -f /etc/resolv.conf ] ; then
+  cp -a /etc/resolv.conf ${VZROOT}/etc
+  fi
+
+#inserting hostname 
+echo "hostname=$NODE.$DOMAIN" > ${VZROOT}/etc/conf.d/hostname
+
+#====================================================
+#removing log to dmesg
+sed -i -e's/log_dmesg="YES"/log_dmesg="NO"/' ${VZROOT}/etc/conf.d/bootmisc
+
+#removing sysinit script
+rm -f "${VZROOT}/etc/runlevels/sysinit/boot"
+rm -f "${VZROOT}/etc/runlevels/sysinit/cgroups"
+rm -f "${VZROOT}/etc/runlevels/sysinit/devfs"
+rm -f "${VZROOT}/etc/runlevels/sysinit/dmesg"
+rm -f "${VZROOT}/etc/runlevels/sysinit/kmod-static-nodes"
+rm -f "${VZROOT}/etc/runlevels/sysinit/root"
+rm -f "${VZROOT}/etc/runlevels/sysinit/sysfs"
+rm -f "${VZROOT}/etc/runlevels/sysinit/systemd-tmpfiles-setup-dev"
+rm -f "${VZROOT}/etc/runlevels/sysinit/udev"
+rm -f "${VZROOT}/etc/runlevels/sysinit/udev-trigger"
+
+#stop keymaps
+rm -f "${VZROOT}/etc/runlevels/boot/keymaps"
+rm -f "${VZROOT}/etc/runlevels/boot/save-keymaps"
+#rm -f "${VZROOT}/etc/runlevels/boot/termencoding"
+
+#stop swap and hwclock eneration
+rm -f "${VZROOT}/etc/runlevels/boot/swap"
+rm -f "${VZROOT}/etc/runlevels/boot/hwclock"
+rm -f "${VZROOT}/etc/runlevels/boot/mtab"
+
+#stop file system check
+rm -f "${VZROOT}/etc/runlevels/boot/fsck"
+
+#stop file random seed
+rm -f "${VZROOT}/etc/runlevels/boot/seedrng"
+
+#starting ssh at boot
+ln -sf /etc/init.d/sshd "${VZROOT}/etc/runlevels/default/sshd"
+
+#Note:
+#to resync packaging
+#emerge-webrsync
+#to install package ssh
+#emerge --ask n net-misc/openssh
+
+#====================================================
+exit 0

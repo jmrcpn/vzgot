@@ -1,56 +1,59 @@
-#! /usr/bin/bash
+#!/usr/bin/bash
 #
 # vzgot		This shell script takes care of starting and stopping
 #               vzgot container with the "ON" status
 #
-# description:	Scan vzgot vdir directory to find out about container
+# description:	Scan vzgot directory to find out about container
 #		and start them if requested.
 #
-#
+
+#10000 cgroup cpu.weight maximun value
+WEIGHT=10000
+
+CGROUP="/sys/fs/cgroup"
+VZGROUP=${CGROUP}/vzgot
 CONFDIR=/etc/vzgot
-if [ -f $CONFDIR/vzgot_config ] ; then
-  . $CONFDIR/vzgot_config
+if [ -f ${CONFDIR}/vzgot_config ] ; then
+  . ${CONFDIR}/vzgot_config
   fi
 
 #------------------------------------------------------------------
 vzgotstart()
 
 {
-modprobe br_netfilter
-modprobe iptable_filter
-modprobe ip6table_filter
-echo 1 > /proc/sys/net/bridge/bridge-nf-call-iptables
-mount -t cgroup2 none $CGROUP
+#modprobe br_netfilter
+#echo 1 > /proc/sys/net/bridge/bridge-nf-call-iptables
+
 count=0
-for cont in `ls $CONFDIR/names`
+for cont in `ls ${CONFDIR}/names`
   do
-  . $CONFDIR/names/$cont
+  . ${CONFDIR}/names/$cont
   onboot=`echo $ONBOOT | tr [:upper:] [:lower:]`
   if [ "$onboot" != "yes" ] ; then
     continue
     fi
   CONTDIR=$VZDIR/$cont
-  if [ -n "$HOMEFS" ] ; then
-    CONTDIR=$HOMEFS
+  if [ -n "${HOMEFS}" ] ; then
+    CONTDIR=${HOMEFS}
     fi
   CONTPID=""
-  if [ -f $CONTDIR/first.pid ] ; then
-    CONTPID=`cat $CONTDIR/first.pid`
+  if [ -f ${CONTDIR}/first.pid ] ; then
+    CONTPID=`cat ${CONTDIR}/first.pid`
     fi
   if [ -n "$CONTPID" -a -e /proc/$CONTPID ] ; then
     continue
     fi
   delay=`expr  $count \* 3  + 10`
-  # log_info_msg "$delay seconds delay to boot container $cont"
   (
   sleep $delay
-  BOOTLOG=$CONTDIR/bootlog
-  vzgot boot $cont > $BOOTLOG 2>&1
-  date >> $BOOTLOG
+  BOOTLOG=${CONTDIR}/bootlog
+  vzgot boot $cont > ${BOOTLOG} 2>&1
+  date >> ${BOOTLOG}
   ) &
-  # evaluate_retval
   count=`expr $count + 1`
   done
+
+logger -t vzgot "vzgot: $count containers are now on the 'starting block'"
 }
 
 vzgotstop()
@@ -58,17 +61,17 @@ vzgotstop()
 {
 MAXT=30
 count=0
-tostop=`ls $CONFDIR/names | sort -r`
+tostop=`ls ${CONFDIR}/names | sort -r`
 for cont in ${tostop}
   do
-  . $CONFDIR/names/$cont
+  . ${CONFDIR}/names/$cont
   CONTDIR=$VZDIR/$cont
-  if [ -n "$HOMEFS" ] ; then
-    CONTDIR=$HOMEFS
+  if [ -n "${HOMEFS}" ] ; then
+    CONTDIR=${HOMEFS}
     fi
   CONTPID=""
-  if [ -f $CONTDIR/first.pid ] ; then
-    CONTPID=`cat $CONTDIR/first.pid`
+  if [ -f ${CONTDIR}/first.pid ] ; then
+    CONTPID=`cat ${CONTDIR}/first.pid`
     fi
   if [ -n "$CONTPID" -a -e /proc/$CONTPID ] ; then
     sleep 0.2
@@ -76,43 +79,92 @@ for cont in ${tostop}
     count=`expr $count + 1`
     fi
   done
+logger -t vzgot "Stopping all $count containers ASAP"
+sleep 1
 for ((t=1;t<$MAXT;t++))
   do
-  sleep 0.5
-  remain=`vzgot online | wc -l`
+  remain=0;
+  for cont in ${tostop}
+    do
+    sleep 2
+    . ${CONFDIR}/names/$cont
+    CONTDIR=$VZDIR/$cont
+    if [ -n "${HOMEFS}" ] ; then
+      CONTDIR=${HOMEFS}
+      fi
+    CONTPID=""
+    if [ -f ${CONTDIR}/first.pid ] ; then
+      CONTPID=`cat ${CONTDIR}/first.pid`
+      fi
+    if [ -n "$CONTPID" -a -e /proc/$CONTPID ] ; then
+      remain=`expr $remain + 1`
+      fi
+    done
   if [ $remain = 0 ] ; then
-    umount $CGROUP
-    break
+    break;
     fi
+  logger -t vzgot "Waiting containers full shutdown, remain $remain/$count...."
   done
+if [ $remain = 0 ] ; then
+  logger -t vzgot "All containers now down"
+  rmdir ${VZGROUP}/containers/
+  rmdir ${VZGROUP}/supervisors/
+  rmdir ${VZGROUP}/
+  true
+else
+  logger -t vzgot "$remain containers still up"
+  false
+fi
 }
 
 #------------------------------------------------------------------
 case "$1" in
   start)
-	# Start daemons.
+	#make sure to have a good sysctl
+	sysctl --system -q > /dev/null
+	#make sure to have a we have the fuse device
+	modprobe fuse
+	#cgroup configuration
 	if [ -f ${CGROUP}/cgroup.controllers ] ; then
-	  echo "+cpuset +memory" >${CGROUP}/cgroup.subtree_control
+	  #Caution! # CONFIG_RT_GROUP_SCHED is not set
+	  echo "+cpu +cpuset +memory +pids" >${CGROUP}/cgroup.subtree_control
 	  fi
-	vzgotstart
+	mkdir -p ${VZGROUP}
+	if [ -f ${VZGROUP}/cgroup.controllers ] ; then
+	  echo "+cpu +cpuset +memory +pids"		\
+	      > ${VZGROUP}/cgroup.subtree_control
+	  fi
+	mkdir -p ${VZGROUP}/containers
+	if [ -f ${VZGROUP}/containers/cgroup.controllers ] ; then
+	  #Caution! # CONFIG_RT_GROUP_SCHED need to be set 
+	  echo "+cpu +cpuset +memory +pids"		\
+	      > ${VZGROUP}/containers/cgroup.subtree_control
+	  fi
+	echo ${WEIGHT} > ${VZGROUP}/containers/cpu.weight
+	mkdir -p ${VZGROUP}/supervisors
+	# Start daemons.
+	vzgotstart;
 	;;
 
   stop)
-	if [ -f ${CGROUP}/cgroup.controllers ] ; then
-	  echo "-cpuset -memory" >${CGROUP}/cgroup.subtree_control
-	  fi
 	# Stopping daemons.
-	vzgotstop
+	vzgotstop;
 	;;
 
-  reload)
+  restart)
 	$0 stop
-	sleep 4
 	$0 start
 	;;
 
+  reload)
+	echo "Nothing to do"
+	;;
+
+  status)
+	status $PROG
+	;;
   *)
-	echo "Usage: vzgot {start|stop|reload|status}"
+	echo "Usage: vzgot {start|stop|restart|status}"
 	exit 1
 esac
 

@@ -58,3 +58,4 @@ extern void log_alert(const int dlevel,const char *fmt,...)
 		__attribute__((format(printf,2,3)));
 
 #endif
+

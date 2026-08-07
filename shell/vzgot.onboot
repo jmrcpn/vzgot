@@ -1,0 +1,14 @@
+#! /usr/bin/bash
+#----------------------------------------------------
+#shell used to set container to be bootable (on state)
+#$1 is the container name
+#
+#----------------------------------------------------
+ACTION="Yes"
+CONFDIR=/etc/vzgot
+ret=1
+if [ -f "${CONFDIR}/names/$1" ] ; then
+  sed -i "s:\(ONBOOT=\"\)[^\"]*:\1${ACTION}:" ${CONFDIR}/names/$1
+  ret=$?
+  fi
+exit ${ret}

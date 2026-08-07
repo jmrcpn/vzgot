@@ -16,7 +16,7 @@ dotransfer()
 ONBOOT="no"
 echo "Starting $2 move from $1"
 
-ONLINE=`vzgot online | grep ^$2`
+ONLINE=`vzgot online | grep "^$2 "`
 if [ -n "$ONLINE" ] ; then
   echo "$2 already running on local HOST, aborting move at once!"
   exit 3

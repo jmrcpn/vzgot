@@ -29,10 +29,12 @@
 #include	<sys/wait.h>
 
 #include	"dbglog.h"
+#include	"lowapl.h"
 #include	"lowtyp.h"
 #include	"utlapl.h"
 #include	"utlprc.h"
 #include	"subcfg.h"
+#include	"subprc.h"
 #include	"unicnt.h"
 #include	"unilck.h"
 
@@ -67,6 +69,139 @@ static void usage()
 (void) fprintf(stderr,"\t\t-h           : display usage\n");
 (void) fprintf(stderr,"\t\t-v           : verbose debug\n");
 (void) fprintf(stderr,"\t\tname_name    : container name to probe\n");
+}
+/*
+
+*/
+/************************************************/
+/*						*/
+/*	procedure to extract loadavg values from*/
+/*	cgroup data, format then and write them	*/
+/*	to the loadavg file.			*/
+/*						*/
+/************************************************/
+static const char *cal_loadavg(const char *contname,uint16_t nbr_cpu,double delta_t)
+
+{
+#define OPEP	"unicnt.c:cal_loadavg,"
+#define	MDELTA	0.1	//minimal delta between to measurement
+
+static char strload[100];
+static u_vlong last_host_load=0;
+static u_vlong last_cnt_load=0;
+
+u_vlong usage;
+u_vlong pression;
+u_vlong cur_host_load;
+u_vlong cur_cnt_load;
+double host_avg[3];
+uint32_t pids_current;
+pid_t last_pid;
+double ratio;
+int phase;
+_Bool proceed;
+
+(void) memset(strload,'\000',sizeof(strload));
+usage=(u_vlong)0;
+pression=(u_vlong)0;
+cur_host_load=(u_vlong)0;
+cur_cnt_load=(u_vlong)0;
+ratio=0.0;
+pids_current=0;
+last_pid=(pid_t)0;
+phase=0;
+proceed=true;
+while (proceed==true) {
+  //(void) log_alert(0,"%s JMPDBG phase='%d' delta_t='%lf'",OPEP,phase,delta_t);
+  switch (phase) {
+    case 0	:	//getting the current container usage component
+      if (prc_cnt_usage(contname,&usage)==false) {
+        (void) log_alert(0,"%s Unable to get container <%s> cpu usage (Bug?)",
+			    OPEP,contname);
+	phase=999;	//Trouble trouble
+	}
+      if (prc_cnt_pressure(contname,&pression)==false) {
+        (void) log_alert(0,"%s Unable to get container <%s> cpu pressure (Bug?)",
+		            OPEP,contname);
+  	phase=999;	//Trouble trouble
+	}
+      cur_cnt_load=usage+pression;
+      break;
+    case 1	:	//getting the current HOST usage component
+      if (prc_cnt_usage("",&usage)==false) {
+        (void) log_alert(0,"%s Unable to get HOST cpu usage (Bug?)",OPEP);
+	phase=999;	//Trouble trouble
+	}
+      if (prc_cnt_pressure("",&pression)==false) {
+        (void) log_alert(0,"%s Unable to get HOST cpu pressure (Bug?)",OPEP);
+  	phase=999;	//Trouble trouble
+	}
+      cur_host_load=usage+pression;
+      break;
+    case 2	:	//Firt time calculation?
+      if (last_host_load==(u_vlong)0) 
+	phase=999;	//We need at least one pass to compute ratio
+      break;
+    case 3	:	//getting the total number of pid own by  container
+      if (prc_cnt_pids_current(contname,&pids_current)==false) {
+        (void) log_alert(0,"%s Unable to get <%s> current number of pids (Bug?)",
+		            OPEP,contname);
+  	phase=999;	//Trouble trouble
+	}
+      break;
+    case 4	:	//getting the official LOAD Usage.
+      if (prc_host_loadavg(&host_avg[0],&host_avg[1],&host_avg[2])==false) {
+        (void) log_alert(0,"%s Unable to get HOST current load (Bug?)",OPEP);
+  	phase=999;	//Trouble trouble
+	}
+      break;
+    case 5	:	//computing ration container/HOST
+      if (delta_t>MDELTA) { //always
+	double delta_host;
+	double delta_cnt;
+
+	delta_cnt=cur_cnt_load-last_cnt_load;
+	delta_host=cur_host_load-last_host_load;
+	if (delta_host>0.0) {	//should be always the case
+	  ratio=delta_cnt/delta_host;
+	  if (ratio>1.0)
+	    ratio=1.0;
+	  break; 		//Ne need to go further
+	  }
+	}
+      if (ratio<0.0) {
+        (void) log_alert(0,"%s Beware load ratio='%f' (expected>0.0 Bug?)",
+			    OPEP,ratio);
+	phase=999;		//Trouble!
+	}
+      break;
+    case 6	:	//Getting the CONTAINER lastpid
+      if (sys_get_last_pid(contname,&last_pid)==false) {
+        (void) log_alert(0,"%s Unable to get container last pid (Bug?)",OPEP);
+	phase=999;	//trouble trouble
+	}
+      break;
+    case 7	:	//applying ratio
+      for (int i=0;i<3;i++) 
+	host_avg[i]*=ratio;
+      (void) snprintf(strload,sizeof(strload),"%5.2lf %5.2lf %5.2lf 1/%u %u",
+			        	       host_avg[0],
+					       host_avg[1],
+					       host_avg[2],
+					       pids_current,last_pid);
+      break;
+    default	:	//SAFE Guard
+      last_cnt_load=cur_cnt_load;
+      last_host_load=cur_host_load;
+      proceed=false;
+      break;
+    }
+  phase++;
+  }
+return (const char *)strload;
+
+#undef	MDELTA
+#undef	OPEP
 }
 /*
 ^L

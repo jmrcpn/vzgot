@@ -1,0 +1,11 @@
+#!/bin/sh
+set -e
+
+if [ "$1" = "configure" ]; then
+    if [ -x "/sbin/ifup" ]; then ifup vz-br0 2>/dev/null || true; fi
+    update-rc.d vzgot defaults >/dev/null || true
+    invoke-rc.d vzgot start || true
+fi
+
+#DEBHELPER#
+exit 0

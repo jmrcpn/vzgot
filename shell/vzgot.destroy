@@ -6,9 +6,7 @@
 #----------------------------------------------------
 #Syntaxe
 #vzgot.destroy VE_name
-#	VE_name is the container dir name
-#	base_dir is this application root directory
-#	used for devel only.
+#	$1 is the container name
 #----------------------------------------------------
 CONTNAME=$1
 #----------------------------------------------------

@@ -1,0 +1,12 @@
+#--------------------------------------------------------------------
+#Define ALL debian packaging function
+#--------------------------------------------------------------------
+#To install needed components to be able to build vzgot
+#sudo apt install dpkg-dev build-essential devscripts 
+#vzgot dependency
+#sudo apt install libcap-dev
+
+dodeb	: 
+	  @ dpkg-buildpackage -b -uc -us
+	  @ #to install vzgot
+	  @ # dpkg -i ../vzgot_*.deb

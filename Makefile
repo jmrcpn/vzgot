@@ -40,6 +40,7 @@ SUBDIRS	=							\
 #Makefile sub-function
 include		./Makefile.vers
 include		./Makefile.dorpm
+include		./Makefile.debian
 #--------------------------------------------------------------------
 #SAFE Makefile Management
 -include	./Makefile.safe

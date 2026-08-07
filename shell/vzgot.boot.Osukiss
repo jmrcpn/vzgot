@@ -1,0 +1,78 @@
+#! /usr/bin/bash
+#----------------------------------------------------
+#shell used to make sure container rootfs contents is 
+#container ready.
+#$1 container name
+
+#----------------------------------------------------
+if [ -z "$1" ] ; then
+  echo "$0, missing container name (abort!)"
+  exit 1
+  fi
+
+#====================================================
+CONTNAME=$1
+
+CONFDIR=/etc/vzgot
+. ${CONFDIR}/vzgot_config
+
+if [ ! -f ${CONFDIR}/names/${CONTNAME} ] ; then
+  echo "Missing ${CONTNAME} name file"
+  exit 1	#trouble trouble
+fi
+
+. ${CONFDIR}/names/${CONTNAME}
+if [ -z "${HOMEFS}" ] ; then 
+  echo "Missing ${CONTNAME} HOMEFS variable"
+  exit 1	#trouble trouble
+fi
+
+VZROOT=${HOMEFS}/rootfs
+
+#====================================================
+#removing un-needed script within init
+
+(
+pushd ${VZROOT}/etc/rc.d/rcS.d > /dev/null
+rm -f S06setclock S07modules S12setnet S70console
+cd ..
+sed -i						\
+  -e "s/sd_mod ipv6//"				\
+  rc.sysinit
+popd  
+pushd ${VZROOT}/etc/rc.d/init.d > /dev/null
+rm -f						\
+       	sysctl					\
+	checkfs					\
+	mountfs					\
+	../rc0.d/K50swap			\
+	../rc0.d/K96mountfs			\
+
+popd  
+) > /dev/null 2>&1
+
+#removing udev family auto start
+UDEV="/sbin/start_udev"
+/bin/rm -fr ${VZROOT}/${UDEV} > /dev/null 2>&1
+/bin/ln /bin/true ${VZROOT}/$UDEV > /dev/null 2>&1
+
+#Removing "setterm --blank for console
+sed -i						\
+	-e "s/^setterm/#setterm/"		\
+	${VZROOT}/etc/rc.local
+
+#to remove clock initialization
+/sbin/chroot ${VZROOT} chkconfig --del setclock
+
+#Removing clearing dmesg fing buffer
+if [ -x ${VZROOT}/usr/bin/dmesg ] ; then
+  rm -fr ${VZROOT}/usr/bin/dmesg
+  fi
+
+sed -i						\
+  -e"s/nf_conntrack_ftp xt_CT xt_helper//"	\
+  ${VZROOT}/etc/sysconfig/iptables-config	\
+  ${VZROOT}/etc/sysconfig/ip6tables-config	\
+
+#====================================================
+exit 0

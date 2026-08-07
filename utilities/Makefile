@@ -21,18 +21,20 @@ exe	:
 	  $(MAKE) $(EXE)
 	
 clean	:
-	  @ - rm -fr *.o $(EXE) *~ 
+	  @ - rm -fr a.out *.o $(EXE) *~ 
 
 #--------------------------------------------------------------------
 #Executable file to do
 EXE=								\
 	tstavg							\
 	tstonl							\
-	setcpu 
+	syspvt							\
+	setcpu 							\
 
 OBJS=								\
 	tstavg.o						\
 	tstonl.o						\
+	syspvt.o						\
 	setcpu.o						\
 
 
@@ -45,7 +47,11 @@ $(EXE)	:  $(OBJS) $(VZLIB)
 	   @ $(LD) $(LDFLAGS) -o $@ $@.o $(LIBS)
 	
 #--------------------------------------------------------------------
+syspvt.o:							\
+	   syspvt.c
+
 setcpu.o:							\
+	   ../lib/lowapl.h					\
 	   ../lib/lowtyp.h					\
 	   ../lib/utlapl.h					\
 	   ../lib/utlprc.h					\
@@ -57,15 +63,18 @@ setcpu.o:							\
 	   setcpu.c
 
 tstavg.o:							\
+	   ../lib/lowapl.h					\
 	   ../lib/lowtyp.h					\
 	   ../lib/utlapl.h					\
 	   ../lib/utlprc.h					\
 	   ../lib/subcfg.h					\
+	   ../lib/subprc.h					\
 	   ../lib/unicnt.h					\
 	   ../lib/unilck.h					\
 	   tstavg.c
 
 tstonl.o:							\
+	   ../lib/lowapl.h					\
 	   ../lib/lowtyp.h					\
 	   ../lib/utlapl.h					\
 	   ../lib/utlprc.h					\

@@ -1,0 +1,9 @@
+#this file is used to link container name with template, distribution
+#and architecture.
+#A good source of container template cans be found within
+#https://images.linuxcontainers.org/
+#wWhen the template is used to prepare your container
+#'vzgot create your_container_name [IPNUMs]
+#the creation process espect to find network capabilities, sshd
+#and iptables packages
+#-----------------------------------------------------------------

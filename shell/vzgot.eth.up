@@ -1,0 +1,74 @@
+#! /usr/bin/bash
+#echo -n "DEBUG PID=$$ Doing <$0>  " ; date
+#----------------------------------------------------
+#shell used to setup the host part (network, cgroup)
+#while starting a vzgot Virtual Host
+#This shell is called from the vzgot executable, via
+#	vzgot boot cont_name
+#----------------------------------------------------
+CONTNAME=$1
+VEPID=$2
+#----------------------------------------------------
+#loading configuration
+CONFDIR=/etc/vzgot
+if [ -f $CONFDIR/vzgot_config ] ; then
+  . $CONFDIR//vzgot_config
+  if [ -f $CONFDIR/name/${CONTNAME} ] ; then
+    . $CONFDIR/names/${CONTNAME}
+    fi
+  fi
+
+if [ -z "${HOMEFS}" -o -z "${FULLNAME}" ] ; then 
+  echo "Missing ${CONTNAME} HOMEFS  or FULLNAME variable"
+  echo "check container config"
+  exit 1	#trouble trouble
+  fi
+
+#======================================================================
+#network setup from HOST standpoin
+#to be sure to start fresh with veth pair
+/usr/sbin/ip link del v-${CONTNAME} > /dev/null 2>&1
+#creation the veth pair.
+/usr/sbin/ip link add name v-${CONTNAME} type veth peer name eth0
+ret=$?
+if [ $ret -ne 0 ]; then
+  echo "$0, unable to create veth ${CONTNAME} To/From pair"
+  exit $ret
+  fi
+#activating vteh HOST interface
+/usr/sbin/ip link set  v-${CONTNAME} up
+ret=$?
+if [ $ret -ne 0 ]; then
+  echo "$0, unable to activate veth HOST part"
+  exit $ret
+  fi
+#linking HOST vteh to bridge
+/usr/sbin/brctl addif ${BRIDGENAME} v-${CONTNAME}
+ret=$?
+if [ $ret -ne 0 ]; then
+  echo "$0, unable to link veth HOST part to bridge"
+  exit $ret
+  fi
+#giving the "from" part of the pair to VZ
+/usr/sbin/ip link set eth0 netns $VEPID
+if [ $ret -ne 0 ]; then
+  echo "$0, unable to give F_${CONTNAME} veth pair to container process"
+  exit $ret
+  fi
+#======================================================================
+#establishing route to container IP
+if [[ "${FULLNAME}" =~ ^[0-9.]+$ ]]; then
+  IPNUM=${FULLNAME}
+else
+  IPNUM=`dig +short ${FULLNAME}`
+fi
+if [ -n "${IPNUM}" ] ; then
+  /usr/sbin/ip route add ${IPNUM} dev ${BRIDGENAME}
+  ret=$?
+  if [ $ret -ne 0 ]; then
+    echo "$0, Host is unable to add route to container ${CONTNAME}"
+    exit $ret
+  fi
+fi
+#======================================================================
+exit 0

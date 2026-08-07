@@ -17,14 +17,48 @@
 # Short-Description: starting container
 ### END INIT INFO
 
+MODE="sysv"
+# THis script could be used by systemd, lets find out
+if [ -n "$NOTIFY_SOCKET" ] || { [ -x /usr/bin/systemctl ] && /usr/bin/systemctl is-system-running >/dev/null 2>&1; }; then
+  MODE="systemd"
+fi
 
-#basic function
-. /lib/lsb/init-functions
+#ANSI colore to console display (Osukiss sysv)
+GREEN="\033[1;32m"
+RED="\033[1;31m"
+NORMAL="\033[0m"
+
+# log_status $1 = message, $2 = Return status (0 ou 1)
+log_status()
+
+{
+case "${MODE}" in
+  "sysv"	)
+    if [ "$2" = "0" ]; then
+      printf "[  ${GREEN}OK${NORMAL}  ] %s\n" "$1"
+    else
+      printf "[${RED}FAILED${NORMAL}] %s\n" "$1"
+    fi
+    ;;
+  "systemd"	)
+    if [ "$2" = "0" ]; then
+      echo "<6>vzgot: $1"
+    else
+      echo "<3>vzgot: ERROR - $1"
+    fi
+    ;;
+  *		)
+    echo $1 -> $2
+    ;;
+  esac
+}
 
 #10000 cgroup cpu.weight maximun value
 WEIGHT=10000
 
 CGROUP="/sys/fs/cgroup"
+VZGROUP=${CGROUP}/vzgot 
+
 CONFDIR=/etc/vzgot
 if [ -f $CONFDIR/vzgot_config ] ; then
   . $CONFDIR/vzgot_config
@@ -34,9 +68,6 @@ if [ -f $CONFDIR/vzgot_config ] ; then
 vzgotstart()
 
 {
-#modprobe br_netfilter
-#echo 1 > /proc/sys/net/bridge/bridge-nf-call-iptables
-
 count=0
 for cont in `ls $CONFDIR/names`
   do
@@ -67,9 +98,8 @@ for cont in `ls $CONFDIR/names`
   # evaluate_retval
   count=`expr $count + 1`
   done
-log_info_msg "vzgot: $count containers are now on the 'starting block'"
-true
-evaluate_retval
+log_status "vzgot: ${count} containers are now on the 'starting block'" 0
+return 0;
 }
 
 vzgotstop()
@@ -95,9 +125,7 @@ for cont in ${tostop}
     count=`expr $count + 1`
     fi
   done
-log_info_msg "Stopping all $count containers ASAP"
-sleep 1
-evaluate_retval
+log_status "Stopping all ${count} containers ASAP" 0
 for ((t=1;t<$MAXT;t++))
   do
   remain=0;
@@ -119,24 +147,21 @@ for ((t=1;t<$MAXT;t++))
   if [ $remain = 0 ] ; then
     break;
     fi
-  log_info_msg "Waiting containers full shutdown, remain $remain/$count...."
+  log_status "Waiting containers full shutdown, remain $remain/$count...." 0
   sleep 3
-  evaluate_retval
   done
-if [ $remain = 0 ] ; then
-  log_info_msg "vzgot: all containers now down"
-  rmdir $VZCGROUP/containers/
-  rmdir $VZCGROUP/supervisors/
-  rmdir $VZCGROUP/
-  true
+ret=0;
+if [ ${remain} = 0 ] ; then
+  log_status "vzgot: all containers now down" ${ret};
 else
-  log_info_msg "vzgot: $remain containers still up"
-  false
+  ret=1;
+  log_status "vzgot: $remain containers still up" ${ret}
 fi
-evaluate_retval
+return ${ret}
 }
 
 #------------------------------------------------------------------
+ret=0;
 case "$1" in
   start)
 	#make sure to have a good sysctl
@@ -144,30 +169,25 @@ case "$1" in
 	#make sure to have a we have the fuse device
 	modprobe fuse
 	#cgroup configuration
+	#Caution! # CONFIG_RT_GROUP_SCHED need to be set in kernel config
 	if [ -f ${CGROUP}/cgroup.controllers ] ; then
-	  #Caution! # CONFIG_RT_GROUP_SCHED is not set
+	  #Caution! # CONFIG_RT_GROUP_SCHED need to be set in kernel config
 	  echo "+cpu +cpuset +memory +pids" >${CGROUP}/cgroup.subtree_control
 	  fi
-	mkdir -p ${VZCGROUP}
-	if [ -f ${VZCGROUP}/cgroup.controllers ] ; then
-	  echo "+cpu +cpuset +memory +pids"		\
-	      > ${VZCGROUP}/cgroup.subtree_control
+	mkdir -p ${VZGROUP}
+	echo ${WEIGHT} > ${VZGROUP}/cpu.weight
+	if [ -f ${VZGROUP}/cgroup.controllers ] ; then
+	  echo "+cpu +cpuset +memory +pids" >${VZGROUP}/cgroup.subtree_control
 	  fi
-	mkdir -p ${VZCGROUP}/containers
-	if [ -f ${VZCGROUP}/containers/cgroup.controllers ] ; then
-	  #Caution! # CONFIG_RT_GROUP_SCHED need to be set 
-	  echo "+cpu +cpuset +memory +pids"		\
-	      > ${VZCGROUP}/containers/cgroup.subtree_control
-	  fi
-	echo ${WEIGHT} > ${VZCGROUP}/containers/cpu.weight
-	mkdir -p ${VZCGROUP}/supervisors
 	# Start daemons.
 	vzgotstart;
+	ret=$?;
 	;;
 
   stop)
 	# Stopping daemons.
 	vzgotstop;
+	ret=$?;
 	;;
 
   restart)
@@ -187,5 +207,5 @@ case "$1" in
 	exit 1
 esac
 
-exit 0
+exit ${ret}
 

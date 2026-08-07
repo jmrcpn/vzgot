@@ -5,21 +5,37 @@
 #[$2] is the vzserver node IPNUMBER 
 #-------------------------------------------------------------------
 if [ -z $1 ] ; then
-  echo "You need to specify at least the nodename"
+  echo "You need to specify at least the contname"
+  echo "commande is $0 container_name [ipnum]"
   exit 1
   fi
 
 FULLNAME=$1
-NODENAME=`echo $FULLNAME | cut -d '.' -f1`
-DOMAIN=`echo $FULLNAME | cut -d '.' -f2-`
-if [ -z $DOMAIN ] ; then
+if [[ "$FULLNAME" == *.* ]]; then
+  CONTNAME="${FULLNAME%%.*}"	
+  DOMAIN="${FULLNAME#*.}"
+else
+  CONTNAME="${FULLNAME}"	
+  DOMAIN=""
+fi
+if [ -z "${DOMAIN}" ] ; then
   DOMAIN=`hostname -d`
-  fi
+  FULLNAME=${CONTNAME}.${DOMAIN}
+fi
 
 IPNUM=$2
-if [ -z $IPNUM ] ; then
-  IPNUM=`dig +short $NODENAME.$DOMAIN | head -1 | grep -v [a-z]`
+if [ -z "${IPNUM}" ] ; then
+  IPNUM=`dig +short ${CONTNAME}.${DOMAIN}| head -1 | grep -v [a-z]`
+else
+  ip_regex='^((25[0-5]|(2[0-4]|1[0-9]|[1-9]|)[0-9])\.){3}(25[0-5]|(2[0-4]|1[0-9]|[1-9]|)[0-9])$'
+  if [[ "${IPNUM}" =~ $ip_regex ]]; then
+    FULLNAME=${IPNUM}
+  else
+    echo "${IPNUM} is not a valid IPV4 number"
+    exit 1
   fi
+fi
+
 
 CONFDIR=/etc/vzgot
 #===================================================================
@@ -27,9 +43,10 @@ CONFDIR=/etc/vzgot
 DISTRIB="ok-1"
 CPUARCH="x86-64"
 #===================================================================
-#defining default template name 
-#you can modify it according your own template setup name rule
-TPL=$DISTRIB-$CPUARCH.tar.gz
+#defining A default template name 
+#this will be replaced according configuration found within 
+#/etc/vzgot/vzgot_list contents
+TPL=${DISTRIB}-${CPUARCH}.tar*
 #===================================================================
 . $CONFDIR/vzgot_config
 #===================================================================
@@ -63,92 +80,129 @@ exit 1;
 #main process
 
 #locking building process
-lockproc $NODENAME
+lockproc $CONTNAME
 #===================================================================
 #getting all the needed information from the vzgot_list file
 ENTRY=`sed 's/#.*//g' $CONFDIR/vzgot_list	|	\
 		 grep -v '^[[:space:]]*$'	|	\
-		 grep $NODENAME`
+		 grep $CONTNAME`
 
 read -r NODE TEMPLATE DISTRIB CPUARCH <<< $(echo $ENTRY)
 if [ -z "$NODE" ] ; then
-  abort "Unable to find \"$NODENAME\" definition within  /etc/vzgot/vzgot_list"
+  abort "Unable to find \"$CONTNAME\" definition within  /etc/vzgot/vzgot_list"
 else
 #setting distribution
-  FLINUX="RedHat"
   case "$DISTRIB" in
+    "alpine"	)
+      FLINUX="Alpine"	#Alpine family distribution
+      ;;
+    "debian"	)
+      FLINUX="Debian"	#Debian family distribution
+      ;;
+    "fedora"	)
+      FLINUX="Fedora"	#Fedora family distribution
+      ;;
+    "gentoo"	)
+      FLINUX="Gentoo"	#Gentoo family distribution
+      ;;
     "ok-1"	)
       FLINUX="Osukiss"	#Osukiss family distribution
       ;;
-    "centos-7"	|				\
-    "centos-6"	|				\
-    "centos-5"	|				\
-    "rhel-7"	|				\
-    "rhel-6"	|				\
-    "rhel-5"	)
-      FLINUX="RedHat"	#Redhat family distribution
+    "ubuntu"	)
+      FLINUX="Ubuntu"	#Ubuntu family distribution
       ;;
-    "ovzubu9.4"	|				\
-    "ubu9.4"	|				\
-    "ubu8.4"	)
-      FLINUX="Debian"	#Debian family distribution
+    "void"	)
+      FLINUX="Void"	#Void family distribution
       ;;
     "*"		)
       abort "Unknown Linux distribution, exiting"
       exit 1 
       ;;
     esac;
+  fi
 #===================================================================
 #extracting node ip number
   if [ -z "$IPNUM" ] ; then
-    abort "No IP number found for $NODENAME hostname"
+    abort "No IP number found for $CONTNAME hostname"
     fi
 #-------------------------------------------------------------------
 #let create the name file
-mkdir -p $CONFDIR/names
-rm -fr $CONFDIR/names/$NODENAME.destroyed
-cat > $CONFDIR/names/$NODENAME << EOF
+mkdir -p ${CONFDIR}/names
+rm -fr ${CONFDIR}/names/${CONTNAME}.destroyed
+cat > ${CONFDIR}/names/${CONTNAME} << EOF
 #----------------------------------------------------
-#vzgot site '$NODENAME' generation date:`date`
+#vzgot site '${CONTNAME}' generation date:`date`
 #----------------------------------------------------
-NAME=$NODENAME
-FULLNAME=$FULLNAME	
+NAME=${CONTNAME}
+FULLNAME=${FULLNAME}
 #----------------------------------------------------
 #booting information
-ONBOOT="Yes"
-HOMEFS=$VZDIR/$NODENAME
+ONBOOT="No"
+HOMEFS=${VZDIR}/${CONTNAME}
 ONLINETPL=${ONLINETPL}
 #----------------------------------------------------
 #Container working Mode
 PRIVILEGED=${PRIVILEGED}
 #----------------------------------------------------
 #cgroup quota limitations 
+CPUWEIGHT=${CPUWEIGHT}
 MEMMAX=${MEMMAX}
 SWAPMAX=${SWAPMAX}
 PIDMAX=${PIDMAX}
 PWRCPU=${PWRCPU}
 MAXCPU=${MAXCPU}
-NUM=${NUMCPU}
+NUMCPU=${NUMCPU}
 #----------------------------------------------------
 EOF
-#-------------------------------------------------------------------
-#lets create the node file system
-  TPL=$TEMPLATE.tar.gz
-  `dirname $0`/vzgot.build $NODENAME $TPL $DISTRIB $CPUARCH
-  RETVAL=$?
-  if [ $RETVAL -ne 0 ] ; then 
-    abort "Unable to create $NODENAME root file system"
-    fi
-#-------------------------------------------------------------------
-#lets do the node first boot
-  vzgot firstboot -D $FLINUX -i $IPNUM -d $DOMAIN -n $NODENAME $NODENAME
-  RETVAL=$?
-  if [ $RETVAL -ne 0 ] ; then 
-    abort "Unable to do $NODENAME first boot"
-    fi
-#-------------------------------------------------------------------
-#everything fine
-echo "$NODENAME is now installed, to start it do \"vzgot boot $NODENAME\""
 #===================================================================
+#lets create the node file system
+TPL=${TEMPLATE}.tar*
+`dirname $0`/vzgot.build ${CONTNAME} ${TPL} ${DISTRIB} ${CPUARCH}
+RETVAL=$?
+if [ ${RETVAL} -ne 0 ] ; then 
+  abort "Unable to create ${CONTNAME} root file system"
+  rm -fr ${CONFDIR}/names/${CONTNAME} ${CONTNAME}
   fi
+#===================================================================
+#setting master keys to allow access from the the nework
+if [ -z "${MASTER_PUB}" ] ; then
+  MASTER_PUB=/root/.ssh/authorized_keys
+  fi
+if [ -f "${MASTER_PUB}" ] ; then
+  mkdir -p ${VZDIR}/${CONTNAME}/rootfs/root/.ssh/
+  cat ${MASTER_PUB} >> ${VZDIR}/${CONTNAME}/rootfs/root/.ssh/authorized_keys
+  fi
+
+KEY_DIR=${VZ_DATA_LIB}/containers/${CONTNAME}/ssh_keys/
+if [ ! -d "${KEY_DIR}" ] ; then
+  mkdir -p "${KEY_DIR}"
+  /usr/bin/ssh-keygen -q -t rsa -N "" -f "${KEY_DIR}/ssh_host_rsa_key"
+  /usr/bin/ssh-keygen -q -t ecdsa -N "" -f "${KEY_DIR}/ssh_host_ecdsa_key"
+  /usr/bin/ssh-keygen -q -t ed25519 -N "" -f "${KEY_DIR}/ssh_host_ed25519_key"
+  fi
+#storing container ssh keys
+cp -a								\
+       ${KEY_DIR}/*						\
+       ${VZDIR}/${CONTNAME}/rootfs/etc/ssh
+
+#===================================================================
+#let do distribution specific confifiguration
+if [ -x `dirname $0`/vzgot.create.${FLINUX} ] ; then
+  `dirname $0`/vzgot.create.${FLINUX} ${CONTNAME} ${DOMAIN} ${IPNUM}
+   fi
+RETVAL=$?
+if [ ${RETVAL} -ne 0 ] ; then 
+  abort "Unable to configure ${CONTNAME}"
+  rm -fr ${CONFDIR}/names/${CONTNAME}
+  fi
+#===================================================================
+#everything fine
+echo "${CONTNAME} is now properly installed; to start it,"
+echo "type: \"vzgot boot ${CONTNAME}\"."
+echo "----"
+echo "If our container check-list is all green, then you can do:"
+echo "\"vzgot onboot ${CONTNAME}\", such case this container will be"
+echo "started if this Host; itself; is rebooted"
+echo "----"
+#===================================================================
 rm -f $LOCKFILE

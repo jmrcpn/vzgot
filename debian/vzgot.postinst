@@ -1,0 +1,33 @@
+#!/bin/sh
+set -e
+
+if [ "$1" = "configure" ]; then
+    CONFIG_FILE="/etc/vzgot/vzgot_config"
+    sysctl -p > /dev/null 2>&1 || true
+    
+    if [ -f "$CONFIG_FILE" ]; then
+        if command -v zfs >/dev/null 2>&1; then
+            sed -i 's/^VZFS=ext4/VZFS=zfs/' "$CONFIG_FILE"
+        fi
+    fi
+
+    if [ -f /etc/resolv.conf ] ; then
+        (
+        echo "#Installation HOST: $(hostname)"
+        echo -n "#Installation date: "
+        date
+        head -1 /var/lib/vzgot/etc/resolv.conf 2>/dev/null || true
+        /bin/sed 's/#.*//g' /etc/resolv.conf
+        ) >> /var/lib/vzgot/etc/resolv.conf
+    fi
+
+    if [ -f /etc/ssh/sshd_config ] ; then
+        cp -a /etc/ssh/sshd_config /var/lib/vzgot/etc/ssh/server
+    fi
+    if [ -f ~/.ssh/authorized_keys ] ; then
+        cp -a ~/.ssh/authorized_keys /var/lib/vzgot/etc/ssh/access
+    fi
+fi
+
+#DEBHELPER#
+exit 0

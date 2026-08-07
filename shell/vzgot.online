@@ -35,7 +35,7 @@ for cont in ${tostop}
     i=${DIFF}
     LOAD=`awk							\
 	   '{printf "%6.2f %6.2f %6.2f,  %s %s",$1,$2,$3,$4,$5}'\
-	   "${HOMEFS}/rootfs/etc/vzgot/loadavg"			\
+	   "${HOMEFS}/dev/loadavg"				\
 	 `
     ((sec=i%60, i/=60, min=i%60, i/=60, hrs=i%24, day=i/24))
     printf "%-13s UP for %3d days %2d:%02d:%02d," "${cont}:" $day $hrs $min $sec;

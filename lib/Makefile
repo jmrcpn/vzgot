@@ -31,9 +31,10 @@ clean	:
 #--------------------------------------------------------------------
 #Object file list to generate
 OBJS=								\
-	unicfg.o unicnt.o unilck.o				\
+	unicfg.o unicnt.o unilck.o unimon.o			\
 	subcfg.o subprc.o					\
 	utlapl.o utlapp.o utlsys.o utlprc.o utlvec.o 		\
+	lowapl.o						\
 	dbglog.o
 
 VZLB= 								\
@@ -47,29 +48,34 @@ vzlb.a	:  $(OBJS)
 #'C' Definition
 
 unicfg.o:							\
-	  lowtyp.h						\
+	  lowapl.h lowtyp.h					\
 	  dbglog.h						\
 	  utlapl.h utlsys.h utlvec.h				\
 	  subcfg.h subprc.h					\
 	  unicfg.h unicfg.c	
 
 uniclk.o:							\
-	  lowtyp.h						\
+	  lowapl.h lowtyp.h					\
 	  dbglog.h						\
 	  utlapl.h						\
 	  subprc.h						\
 	  unilck.h unilck.c
 
 unicnt.o:							\
-	  lowtyp.h						\
+	  lowapl.h lowtyp.h					\
 	  dbglog.h						\
 	  utlapl.h utlsys.h					\
 	  subcfg.h subprc.h					\
 	  unicnt.h unicnt.c
 
+unimon.o:							\
+	  lowapl.h						\
+	  dbglog.h						\
+	  utlsys.h						\
+	  unimon.h unimon.c
+
 subcfg.o:							\
 	  lowtyp.h						\
-	  dbglog.h						\
 	  utlapl.h utlprc.h					\
 	  subcfg.h subcfg.c
 
@@ -84,7 +90,7 @@ utlapp.o:							\
 	  utlapp.h utlapp.c
 
 utlapl.o:							\
-	  lowtyp.h						\
+	  lowapl.h lowtyp.h					\
 	  dbglog.h						\
 	  utlapl.h utlapl.c
 
@@ -102,6 +108,10 @@ utlvec.o:							\
 	  lowtyp.h						\
 	  dbglog.h						\
 	  utlvec.h utlvec.c
+
+lowapl.o:							\
+	  version.h						\
+	  lowapl.h lowapl.c
 
 dbglog.o:							\
 	  dbglog.h dbglog.c
@@ -128,7 +138,7 @@ CFLAGS=								\
 	-Wall							\
 	-Wshadow						\
 
-FAST    = "-j `(/usr/bin/getconf _NPROCESSORS_ONLN)`"
+FAST    = -j $(shell /usr/bin/getconf _NPROCESSORS_ONLN)
 KSRCVER	= $(shell cat /etc/kernel-devel)
 #--------------------------------------------------------------------
 ifneq ($(wildcard /usr/include/sys/apparmor.h),)

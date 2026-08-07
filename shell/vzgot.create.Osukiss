@@ -1,0 +1,150 @@
+#! /usr/bin/bash
+#----------------------------------------------------
+#shell used to prepare container rootfs according
+#distribution type
+#
+#----------------------------------------------------
+#Syntaxe
+#vzgot.fistboot cont_name domain ip_list [Base]
+#	cont_name is the container name
+#	Domain is the container domainname 
+#	IP_LIST is an ip list (ip,ip1,ip2,..) used
+#		to prepare container network
+#----------------------------------------------------
+CONTNAME=$1
+DOMAIN=$2
+LSTIP=$3
+#----------------------------------------------------
+#extracting configuration
+CONFDIR=/etc/vzgot
+if ! [ -f ${CONFDIR}/vzgot_config ] ; then
+  echo "Missing vzgot config file"
+  exit 1	#trouble trouble
+  fi
+
+. ${CONFDIR}/vzgot_config
+
+. ${CONFDIR}/names/${CONTNAME}
+
+if [ -z "${HOMEFS}" ] ; then 
+  echo "Missing ${CONTNAME} HOMEFS variable"
+  exit 1	#trouble trouble
+  fi
+
+CONTDIR=${HOMEFS}
+#specific container configuration override (if needed)
+if [ -f ${CONTDIR}/vzgot_config ] ; then
+  ${CONTDIR}/vzgot_config
+  fi
+#----------------------------------------------------
+VZROOT=${CONTDIR}/rootfs
+#====================================================
+#procedure to implement Osukiss distribution file
+#----------------------------------------------------
+#Preparing  container /etc/hosts file
+#----------------------------------------------------
+
+HOSTS="${VZROOT}/etc/hosts"
+(
+echo "#----------------------------------------------------"
+echo "#done by vzgot.fboot"
+echo "#----------------------------------------------------"
+echo -e "127.0.0.1\t\t\tlocalhost.localdomain\tlocalhost"
+) > $HOSTS
+
+if [ -n $LSTIP ] ; then
+  (
+  IPV4=`echo $LSTIP | tr ',' ' ' | cut -d' ' -f1`
+  echo -e "$IPV4\t\t\t${CONTNAME}.${DOMAIN}\t\t${CONTNAME}"
+  echo -e "$NETIP6::$IPV4\t${CONTNAME}.${DOMAIN}\t\t${CONTNAME}"
+  echo "#----------------------------------------------------"
+  ) >> $HOSTS
+  fi
+#----------------------------------------------------
+#Prepare /etc/sysconfig/network file
+#----------------------------------------------------
+NET="${VZROOT}/etc/sysconfig/network"
+(
+echo "NETWORK=yes"
+echo "HOSTNAME=${CONTNAME}.${DOMAIN}"
+) > $NET
+
+#----------------------------------------------------
+#Prepare /etc/sysconfig/network-scripts/sysconfig-eth* file
+#----------------------------------------------------
+SCRIPT="${VZROOT}/etc/sysconfig/"
+if [ -n $LSTIP ] ; then
+  ETH0=`echo $LSTIP | tr ',' ' ' | cut -d' ' -f1`
+  (
+  echo "ONBOOT=yes"
+  echo "IFACE=eth0"
+  echo "SERVICE=ip-static"
+  echo "#defining an IPV4 ip number within a Public range"
+  echo "IP=$ETH0"
+  echo "PREFIX=32"
+  echo "#defining an IPV6 ip number within a Public range"
+  echo "IPV6=$NETIP6::$ETH0"
+  echo "PREFIX6=128"
+  ) > ${SCRIPT}/ifconfig.eth0
+  (
+  echo "#----------------------------------------------------"
+  echo "#defining VPS default IPV4 route parameters"
+  echo "192.0.2.0/24 dev eth0 scope link"
+  echo "default via 192.0.2.1 dev eth0"
+  echo "#----------------------------------------------------"
+  ) > ${SCRIPT}/route.eth0
+  (
+  echo "#----------------------------------------------------"
+  echo "#defining VPS default IPV6 route parameters"
+  echo "fc00::192.0.2.1/128 dev eth0 scope link"
+  echo "::/0 via fc00::192.0.2.1 dev eth0"
+  echo "#----------------------------------------------------"
+  ) > ${SCRIPT}/route6.eth0
+  fi
+
+#adding an empty rules
+URULES="${VZROOT}/etc/udev/rules.d"
+mkdir -p ${URULES}
+  (
+  echo "#Empty rules done by vzgot `basename $0`"
+  echo "#to avoid network detection"
+  ) > ${URULES}/70-persistent-net.rules
+#----------------------------------------------------
+#Prepare /dev directoy contents
+DEV="${VZROOT}/dev"
+
+#need this node for sysV reboot
+mknod -m 600 ${DEV}/initctl p
+
+#----------------------------------------------------
+#Prepare /dev directoy fstab
+#----------------------------------------------------
+FSTAB="${VZROOT}/etc/fstab"
+(
+echo -e "/${CONTNAME}\t\t/\t\t\text4\tdefaults\t\t0 0"
+echo -e "proc\t\t/proc\t\t\tproc\tdefaults\t\t0 0"
+echo -e "sysfs\t\t/sys\t\t\tsysfs\tdefaults\t\t0 0"
+echo -e "devpts\t\t/dev/pts\t\tdevpts\trw,noexec,nosuid,mode=0620\t0 0"
+echo -e "tmpfs\t\t/run\t\ttmpfs\tdefaults\t\t0 0"
+) > $FSTAB
+
+#adjusting osukiss /etc/inittab
+sed -i						\
+  -e "/agetty/d"				\
+  ${VZROOT}/etc/inittab
+
+#setting the DNS resolver, using the HOST as reference
+if [ -f /etc/resolv.conf ] ; then
+  cp -a /etc/resolv.conf ${VZROOT}/etc
+  fi
+
+#====================================================
+#adding repo if necessary
+if [ -f ${CONFDIR}/repos/cont.repo ] ; then
+  cp -a						\
+	${CONFDIR}/repos/cont.repo		\
+	${VZROOT}/etc/zypp/repos.d/
+  fi
+
+#====================================================
+exit 0

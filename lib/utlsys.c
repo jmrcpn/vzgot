@@ -5,18 +5,24 @@
 /*	handle CPU function.			*/
 /*						*/
 /************************************************/
+#include	<linux/magic.h>
 #include	<arpa/inet.h>
 #include	<sys/prctl.h>
+#include	<sys/mman.h>
+#include	<sys/mount.h>
 #include	<sys/resource.h>
+#include	<sys/sendfile.h>
 #include	<sys/stat.h>
 #include	<sys/sysinfo.h>
 #include	<sys/syscall.h>
 #include	<sys/time.h>
+#include	<sys/vfs.h>
 #include	<sys/wait.h>
 #include	<ctype.h>
 #include	<cpuid.h>
 #include	<errno.h>
 #include	<fcntl.h>
+#include	<ftw.h>
 #include	<ifaddrs.h>
 #include	<limits.h>
 #include	<signal.h>
@@ -30,12 +36,16 @@
 
 #include	"dbglog.h"
 #include	"lowtyp.h"
+#include	"lowapl.h"
 #include	"utlsys.h"
 
+#define PRG     "utlsys.c"
+
 #define	SYSFS	"/sys/fs/cgroup/"
-#define	SYSVZ	"/sys/fs/cgroup/"VZGOT"/"
+#define	SYSVZ	"/sys/fs/cgroup/"VZGOT
 #define	STARTFS	"starting"
 
+#define CPUWEI  "CPUWEIGHT"     //Variable to set weight granularity
 #define WEIGHT	"cpu.weight"	//container or host, weight register
 #define	CPUMAX	"cpu.max"	//cpu ceilling values
 #define	CPUSTAT	"cpu.stat"	//system cpu usages
@@ -44,6 +54,71 @@
 //container selected processor list
 static	PHYCPU cont_cpus_list;
 
+/*
+
+*/
+/************************************************/
+/*						*/
+/*	Procedure to clean On directory within  */
+/*      cgroup.                                 */
+/*						*/
+/************************************************/
+static int rm_cgroup_item(const char *fpath,const struct stat *sb,
+                          int typeflag,struct FTW *ftwbuf)
+
+{
+#define OPEP    PRG":rm_cgroup_item"
+
+int status;
+
+status=0;
+if (typeflag==FTW_DP) {
+  if (rmdir(fpath)<0) {
+    (void) log_alert(0,"%s Can not remove directoy <%s> (error=<%s>)",
+                         OPEP,fpath,strerror(errno));
+    status=-1;
+    }
+  }
+return status;
+#undef  OPEP
+}
+/*
+
+*/
+/************************************************/
+/*						*/
+/*	Procedure to clean a whole cgroup       */
+/*      directory.                              */
+/*						*/
+/************************************************/
+static _Bool cgroup_clean_recursive(const char *path)
+
+{
+#define OPEP    PRG":cgroup_clean_recursive"
+#define CGKILL   "cgroup.kill"
+
+_Bool isok;
+struct timespec req;
+struct timespec rem;
+char ppath[2028];
+
+
+req.tv_sec=1;
+req.tv_nsec=0;
+(void) snprintf(ppath,sizeof(ppath),"%s/%s",path,CGKILL);
+if (sys_write_str(ppath,"1")==false) 
+  (void) log_alert(0,"%s Unable to write to <%s>",OPEP,ppath);
+while (nanosleep(&req,&rem)<0) {
+  if (errno==EINTR)
+    req = rem;    //be sure to wait 1 sec
+  }
+if (nftw(path,rm_cgroup_item,64,FTW_DEPTH|FTW_PHYS)<0)
+  isok=false;
+return isok;
+
+#undef  CGKILL
+#undef  OPEP
+}
 /*
 
 */
@@ -83,7 +158,7 @@ return value;
 /*	interface name.				*/
 /*						*/
 /************************************************/
-char *get_ip_num(char *intname)
+static char *get_ip_num(char *intname)
 
 {
 #define	OPEP	"utlsys.c:get_ip_num"
@@ -196,8 +271,8 @@ while (proceed==true) {
       break;
     case 3	:	//getting the ip_num within the container namespace
       if ((ip_num=get_ip_num(intname))==(char *)0) 
-        (void) log_alert(0,"%s Warning! Unable to get ip_num from <%s> namespace)",
-			    OPEP,ppath);
+        (void) log_alert(0,"%s Warning! Unable to get ip_num (interface <%s>) "
+                           " from <%s> namespace)",OPEP,intname,ppath);
       break;
     case 4	:	//retreiving the host name space
       if (setns(host_net_fd,CLONE_NEWNET)<0) {
@@ -241,10 +316,10 @@ double sum_w;
 double weights[maxcpu];
 u_vlong work[maxcpu];
 int cpu_ids[maxcpu];
-const char *sysfs;
+char sysfs[512];
+char buf[1024];
 PHYCPU hostcpus;
 PHYCPU todraw;
-char buf[300];
 int phase;
 _Bool proceed;
 
@@ -255,7 +330,7 @@ sum_w=0.0;
 (void) memset(&work,'\000',sizeof(work));
 (void) memset(&cpu_ids,'\000',sizeof(cpu_ids));
 (void) memset(&todraw,'\000',sizeof(todraw));
-sysfs=sys_get_sysfs(cgr_containers);
+(void) sys_get_sysfs(sysfs,sizeof(sysfs),cgr_containers);
 //starting from scratch about CPU (global static)
 phase=0;
 proceed=true;
@@ -378,7 +453,7 @@ while (proceed==true) {
       (void) memset(report,'\000',sizeof(report));
       (void) memset(buf,'\000',sizeof(buf));
       for (unsigned int i=0;i<todraw.maxcpu;i++) {
-	char ajout[1000];
+	char ajout[1200];
 
 	if (CPU_ISSET(i,&(todraw.allocated))==0)
 	  continue;
@@ -388,7 +463,7 @@ while (proceed==true) {
 	buf[0]=',';
 	}
       (void) fprintf(fichier,"\n");
-      (void) log_alert(0,"%s container <%s>, selected CPU=<%s>",
+      (void) log_alert(2,"%s container <%s>, selected CPU=<%s>",
 			  OPEP,contname,report);
       (void) fclose(fichier);
       }
@@ -520,7 +595,7 @@ static _Bool cnt_pids_current(STATYP *status)
 
 _Bool isok;
 FILE *fichier;
-const char *sysfs;
+char sysfs[512];;
 char ppath[PATH_MAX];
 char line[100];
 int phase;
@@ -528,7 +603,7 @@ int proceed;
 
 isok=false;
 fichier=(FILE *)0;
-sysfs=sys_get_sysfs(cgr_containers);
+(void) sys_get_sysfs(sysfs,sizeof(sysfs),cgr_containers);
 (void) snprintf(ppath,sizeof(ppath),"%s/%s/%s",sysfs,status->contname,CPIDS);
 phase=0;
 proceed=true;
@@ -588,17 +663,17 @@ static _Bool get_memory_stress(STATYP *status,CPUENU unit)
 #define	SOME	"some "
 
 _Bool isok;
-const char *sysfs;
 u_int nbrline;
 FILE *fichier;
 char line[100];
+char sysfs[512];
 char epath[PATH_MAX];
 char ppath[PATH_MAX];
 int phase;
 _Bool proceed;
 
 isok=true;
-sysfs=sys_get_sysfs(cgr_containers);
+(void) sys_get_sysfs(sysfs,sizeof(sysfs),cgr_containers);
 fichier=(FILE *)0;
 phase=0;
 proceed=true;
@@ -701,9 +776,9 @@ static char *fname[][2]={
 		   };
 
 _Bool isok;
-const char *sysfs;
 FILE *fichier;
 char line[100];
+char sysfs[512];
 u_vlong max;
 u_vlong used;
 MEMINF *mems;
@@ -715,7 +790,7 @@ int phase;
 _Bool proceed;
 
 isok=false;
-sysfs=sys_get_sysfs(cgr_containers);
+(void) sys_get_sysfs(sysfs,sizeof(sysfs),cgr_containers);
 fichier=(FILE *)0;
 mems=(MEMINF *)0;
 max=(u_vlong)0;
@@ -935,116 +1010,132 @@ return isok;
 */
 /************************************************/
 /*						*/
+/*	Procedure to get the current time within*/
+/*	file available inside the contaner 	*/
+/*	'homefs'/infos/ directory, the file is	*/
+/*	named 'starting'.			*/
+/*	return 0 if not successful.		*/
+/*						*/
+/************************************************/
+static u_vlong get_start(pid_t contpid)
+
+{
+#define	OPEP	PRG":get_start"
+
+u_vlong start;
+FILE *fichier;
+const char *homefs;
+char ppath[PATH_MAX];
+char line[100];
+int phase;
+_Bool proceed;
+
+start=(u_vlong)0;
+fichier=(FILE *)0;
+homefs=getenv(HOMEFS);
+ppath[0]='\000';
+line[0]='\000';
+phase=0;
+proceed=true;
+while (proceed==true) {
+  //(void) log_alert(0,"%s JMPDBG phase='%d' ppath=<%s>",OPEP,phase,ppath);
+  switch (phase) {
+    case 0	:	//checking if we have homefs
+      if ((homefs==(char *)0)||(homefs[0]=='\000')) {
+	(void) log_alert(0,"%s missing homefs (Config? Bug!)",OPEP);
+        goto TOOBAD;    //Trouble
+	}
+      break;
+    case 1	:	
+      (void) snprintf(ppath,sizeof(ppath),"%s/%s",homefs,STARTFS);
+      if ((fichier=fopen(ppath,"r"))==(FILE *)0) {
+	(void) log_alert(0,"%s Unable to open <%s> (error=<%s> system?)",
+			    OPEP,ppath,strerror(errno));
+        goto TOOBAD;    //Trouble
+	}
+      break;
+    case 2	:	//writing starting time
+      if (fgets(line,sizeof(line),fichier)==(char *)0) {
+	(void) log_alert(0,"%s Unable to read <%s> file contents (config? Bug!?)",
+			    OPEP,ppath);
+        (void) fclose(fichier);
+        goto TOOBAD;    //Trouble
+	}
+      break;
+    case 3	:	//getting value
+      (void) fclose(fichier);
+      if (sscanf(line,"%llu",&start)!=1) {
+	(void) log_alert(0,"%s Unable to parse line <%s> (config? Bug!?)",
+			    OPEP,line);
+        goto TOOBAD;
+	}
+      break;
+    TOOBAD      :
+      start=(u_vlong)0;
+    default	:	//SAFE Guard
+      proceed=false;
+      break;
+    }
+  phase++;
+  }
+return start;
+
+#undef	OPEP
+}
+/*
+
+*/
+/************************************************/
+/*						*/
 /*	Procedure to collect the container	*/
 /*	last assigned PID			*/
 /*						*/
 /************************************************/
-static _Bool get_last_pid(STATYP *status)
+PUBLIC _Bool sys_get_last_pid(const char *contname,pid_t *last_pid)
 
 {
-#define	OPEP	"utlsys.c:get_last_pid"
-#define	MXCGR	100000		// Maximun number of alive PID
-#define	NSPID	"NSpid:"
+#define	OPEP	PRG":get_last_pid"
 
 _Bool isok;
 FILE *fichier;
-const char *sysfs;
-char ppath[PATH_MAX];
-char line[64];
-u_int nbrline;
-pid_t last_host_pid;
-char *ptr;
+const char *contpath;
+char pidname[1024];
+char line[30];
 int phase;
 _Bool proceed;
 
 isok=false;
-fichier=(FILE *)0;
-sysfs=sys_get_sysfs(cgr_containers);
-(void) snprintf(ppath,sizeof(ppath),"%s/%s/%s",sysfs,status->contname,"cgroup.procs");
-line[0]='\000';
-nbrline=MXCGR;
-ptr=(char *)0;
+contpath=sys_get_cont_path(contname);
+(void) snprintf(pidname,sizeof(pidname),"%s/dev/lastpid",contpath);
 phase=0;
 proceed=true;
 while (proceed==true) {
   switch (phase) {
-    case 0	:	// Is status avaliable
-      if ((fichier=fopen(ppath,"r"))==(FILE *)0) {
-	(void) log_alert(0,"%s Unable to open <%s> (error=<%s> system?)",
-			    OPEP,ppath,strerror(errno));
-	phase=999;	//trouble
-	}
+    case 0      :       //Opening the container last pid file
+      if ((fichier=fopen(pidname,"r"))==(FILE *)0) {
+        (void) log_alert(1,"%s unable to open <%s> (error=<%s> system?)",
+			       OPEP,pidname,strerror(errno));
+	phase=999;	//no need to go fruther
+        }
       break;
-    case 1	:	// Reading all line
-      while (fgets(line,sizeof(line),fichier)!=(char *)0) {
-	nbrline--;
-	if (nbrline==0) {
-	  (void) log_alert(0,"%s Too many line within file <%s> (maxline='%d')",
-			    OPEP,ppath,MXCGR);
-	  phase=999;
-	  break;
-	  }
-	}
+    case 1      :       //Opening the container last pid file
+      if (fgets(line,sizeof(line)-1,fichier)==(char *)0) {
+        (void) log_alert(0,"%s unable to read <%s> (error=<%s> system?)",
+			       OPEP,pidname,strerror(errno));
+	phase=999;	//no need to go fruther
+        }
       (void) fclose(fichier);
       break;
-    case 2	:	// Is last line good?
-      if (line[0]=='\000') {
-	(void) log_alert(0,"%s file <%s> No data available!i (system?))",
-			    OPEP,ppath);
-	phase=999;
-	}
+    case 2      :       //scanning line
+      if (sscanf(line,"%d",last_pid)!=1) {
+        (void) log_alert(0,"%s unable to scan line <%s> from <%s> file",
+			       OPEP,line,pidname);
+	phase=999;	//no need to go fruther
+        }
       break;
-    case 3	:	// Look for the last Host PID
-      if (sscanf(line,"%d\n",&(last_host_pid))!=1) {
-	(void) log_alert(0,"%s file <%s> line<%s> Not parsable! (bug?))",
-			    OPEP,ppath,line);
-	phase=999;
-	}
-      break;
-    case 4	:	// Lets have the container pid
-      (void) snprintf(ppath,sizeof(ppath),"/proc/%u/status",last_host_pid);
-      if ((fichier=fopen(ppath,"r"))==(FILE *)0) {
-	(void) log_alert(0,"%s Unable to open <%s> (error=<%s> system?)",
-			    OPEP,ppath,strerror(errno));
-	phase=999;	//trouble
-	}
-      break;
-    case 5	:	// Looking for NSpid:
-      nbrline=MXCGR;
-      while (fgets(line,sizeof(line),fichier)!=(char *)0) {
-	if (strncmp(line,NSPID,sizeof(NSPID)-1)==0)
-	  break;
-	nbrline--;
-	if (nbrline==0) {
-	  (void) log_alert(0,"%s Too many line within file <%s> (maxline='%d')",
-			    OPEP,ppath,MXCGR);
-	  phase=999;
-	  break;
-	  }
-	}
-      if (ferror(fichier)!=0) {
-	(void) log_alert(0,"%s Unexpected reading error with file <%s>",
-			    OPEP,ppath);
-	phase=999;
-	}
-      (void) fclose(fichier);
-      break;
-    case 6	:	// Looking for last pid number
-      if ((ptr=strrchr(line,'\t'))==(char *)0) {
-	(void) log_alert(0,"%s unable to parse line  <%s> from file <%s>",
-			    OPEP,line,ppath);
-	phase=999;
-	break;
-	}
-    case 7	:	//extracting pid
-      isok=true;
-      if (sscanf(ptr," %d",&(status->last_pid))!=1) {
-	(void) log_alert(0,"%s line  <%s> from file <%s> no pid found!",
-			    OPEP,line,ppath);
-	isok=false;
-	phase=999;
-	}
-      break;
+    case 3      :       //everything fine
+      isok=true;      
+      //NO BREAK
     default	:	//SAFE Guard
       proceed=false;
       break;
@@ -1053,9 +1144,36 @@ while (proceed==true) {
   }
 return isok;
 
-#undef	NSPID
-#undef	MXCGR
 #undef	OPEP
+}
+/*
+
+*/
+/************************************************/
+/*						*/
+/*	Returning the container working path.	*/
+/*						*/
+/************************************************/
+PUBLIC const char *sys_get_cont_path(const char *cont_name)
+
+{
+static char contpath[128]="";
+
+if (contpath[0]=='\000') {
+  char *homefs;
+
+  homefs=getenv(HOMEFS);
+  if (homefs==(char *)0) {
+    char *vzpath;
+
+    vzpath=apl_appdir(d_vzgot);
+    (void) snprintf(contpath,sizeof(contpath),"%s/%s",vzpath,cont_name);
+    vzpath=apl_freestr(vzpath);
+    }
+  else
+    (void) snprintf(contpath,sizeof(contpath),"%s",homefs);
+  }
+return contpath;
 }
 /*
 
@@ -1196,7 +1314,7 @@ return isok;
 /*	value					*/
 /*						*/
 /************************************************/
-PUBLIC const char *sys_get_sysfs(CGRENU ext)
+PUBLIC char *sys_get_sysfs(char *path,size_t taille,CGRENU ext)
 
 {
 #define	OPEP	"utlsys.c:sys_get_sysfs"
@@ -1206,35 +1324,68 @@ static const char *extensions[cgr_unknown]=
 	[cgr_supervisors]="supervisors",
         [cgr_containers]="containers"
 	};
+int nbr;
 
-static char extsysfs[200];
-
-const char *sysfs;
-
-if ((sysfs=getenv(VZCGROUP))==(const char *)0) {
-  (void) log_alert(0,"%s <%s> env variable missing (config!)",
-		      OPEP,VZCGROUP);
-  sysfs=SYSVZ;
-  }
+nbr=0;
 switch (ext) {
   case cgr_top	:	
-    (void) snprintf(extsysfs,sizeof(extsysfs),"%s","/sys/fs/cgroup");
+    nbr=snprintf(path,taille,"%s",SYSFS);
     break;
   case cgr_vzgot	:	
-    (void) snprintf(extsysfs,sizeof(extsysfs),"%s",sysfs);
+    nbr=snprintf(path,taille,"%s",SYSVZ);
     break;
   case cgr_supervisors	:	//NO BREAK
   case cgr_containers	:
-    (void) snprintf(extsysfs,sizeof(extsysfs),"%s/%s",sysfs,extensions[ext]);
+    nbr=snprintf(path,taille,"%s/%s",SYSVZ,extensions[ext]);
     break;
   default		:
     (void) log_alert(0,"%s, Wrong ext; value='%d'  (Bug!!)",OPEP,(int)ext);
-    (void) snprintf(extsysfs,sizeof(extsysfs),"/tmp");
+    nbr=snprintf(path,taille,"/tmp");
     break;
   }
-return extsysfs;
+if (nbr<0) {
+  (void) log_alert(0,"%s, Unable to store path form value='%d' (Bug!!)",
+                      OPEP,(int)ext);
+  path=(char *)0;
+  }
+return path;
 
 #undef	OPEP
+}
+/*
+
+*/
+/************************************************/
+/*						*/
+/*	Procedure to clean all the way a cgroup */
+/*      directory.                              */
+/*						*/
+/************************************************/
+PUBLIC _Bool sys_clean_all_cgroup(const char *contname,CGRENU ext)
+
+{
+#define OPEP    PRG":sys_clean_all_cgroup"
+
+_Bool isok;
+char sysfs[512];
+char path[1024];
+
+isok=true;
+switch (ext) {
+  case cgr_containers   :
+  case cgr_supervisors  :
+    (void) sys_get_sysfs(sysfs,sizeof(sysfs),ext);
+    (void) snprintf(path,sizeof(path),"%s/%s",sysfs,contname);
+    isok=cgroup_clean_recursive(path);
+    break;
+  default               :
+    (void) log_alert(0,"%s Unexpected ext='%d' (Bug?!)",OPEP,(int)ext);
+    isok=false;
+    break;
+  }
+return isok;
+
+#undef  OPEP
 }
 /*
 
@@ -1398,6 +1549,57 @@ return isok;
 */
 /************************************************/
 /*						*/
+/*	Procedure to write a string within a    */
+/*      file.                                   */
+/*						*/
+/************************************************/
+PUBLIC _Bool sys_write_str(const char *full_path,char *str)
+
+{
+#define OPEP    PRG":sys_write_str"
+int status;
+int fd;
+int phase;
+_Bool proceed;
+
+status=-1;
+fd=-1;
+phase=0;
+proceed=true;
+while (proceed==true) {
+  switch (phase) {
+    case 0      :       //let try top open file
+      if ((fd=open(full_path,O_WRONLY))<0) {
+        (void) log_alert(0,"%s, unable to open <%s> (error=<%s>)",
+                            OPEP,full_path,strerror(errno));
+        phase=999;      //Trouble trouble
+        }
+      break;
+    case 1      :       //let try top open file
+      if (write(fd,str,strlen(str))<0) {
+        (void) log_alert(0,"%s, unable to write <%s> to <%s> (error=<%s>)",
+                            OPEP,str,full_path,strerror(errno));
+        phase=999;      //Trouble trouble
+        }
+      (void) close(fd);
+      break;
+    case 2      :       //everything fine
+      break;
+    default	:	//SAFE Guard
+      proceed=false;
+      break;
+    }
+  phase++;
+  }
+return status;
+
+#undef  OPEP
+}
+/*
+
+*/
+/************************************************/
+/*						*/
 /*	Procedure to format bandwidth structure	*/
 /*	to be displayed on the status template	*/
 /*						*/
@@ -1445,11 +1647,11 @@ return format;
 */
 /************************************************/
 /*						*/
-/*	Procedure to move current procedd to	*/
+/*	Procedure to move current process to	*/
 /*	another cgroup.				*/
 /*						*/
 /************************************************/
-PUBLIC _Bool sys_move_to_cgroup(const char *contname,CGRENU ext)
+PUBLIC _Bool sys_move_to_cgroup(const char *contname,CGRENU ext,pid_t pid)
 
 {
 #define	OPEP	"utlsys.c:sys_move_to_cgroup"
@@ -1457,6 +1659,7 @@ PUBLIC _Bool sys_move_to_cgroup(const char *contname,CGRENU ext)
 
 _Bool isok;
 FILE *fichier;
+char sysfs[512];
 char ppath[PATH_MAX];
 int phase;
 _Bool proceed;
@@ -1468,40 +1671,43 @@ phase=0;
 proceed=true;
 while (proceed==true) {
   switch (phase) {
-    case 0	:	//building the right extension
+    case 0	:	//get the sysfs base value
+      if (sys_get_sysfs(sysfs,sizeof(sysfs),ext)==(char *)0) {
+	(void) log_alert(0,"%s, Unable to assign sysfs (Bug!)",OPEP);
+        goto TOOBAD;
+        }
+      break;
+    case 1	:	//building the right extension
       switch (ext) {
         case cgr_top		:
-	  (void) snprintf(ppath,sizeof(ppath),"%s/%s",sys_get_sysfs(ext),PROC);
+	  (void) snprintf(ppath,sizeof(ppath),"%s/%s",sysfs,PROC);
 	  break;
         case cgr_containers	:
         case cgr_supervisors	:
-	  (void) snprintf(ppath,sizeof(ppath),"%s/%s/%s",
-					      sys_get_sysfs(ext),contname,PROC);
+	  (void) snprintf(ppath,sizeof(ppath),"%s/%s/%s",sysfs,contname,PROC);
 	  break;
         default			:
-	  (void) log_alert(0,"%s, Unexpected CGR_ENUM='%d' (Bug!)",OPEP,ext);
-	  phase=999;
-	  break;
+	  (void) log_alert(0,"%s, Unexpected CGR_ENUM='%d' (Bug! Bug!)",OPEP,ext);
+          goto TOOBAD;
 	}
       break;
-    case 1	:	//opening the cgroup.procs file
+    case 2	:	//opening the cgroup.procs file
       if ((fichier=fopen(ppath,"w"))==(FILE *)0) {
         (void) log_alert(0,"%s Unable to open file <%s> (error=<%s>)",
                             OPEP,ppath,strerror(errno));
-        phase=999;
+        goto TOOBAD;
         }
       break;
-    case 2	:	//moving process to another cgroup
-      (void) fprintf(fichier,"%d\n",getpid());
+    case 3	:	//moving process to another cgroup
+      (void) fprintf(fichier,"%d\n",pid);
       if (fclose(fichier)!=0) {
-	(void) log_alert(0,"%s Unable to close file pid='%d' to <%s> (error=<%s>)",
-                            OPEP,getpid(),ppath,strerror(errno));
-	phase=999;	//proces was NOT moved
+	(void) log_alert(0,"%s Unable to close file <%s> (pid='%d') (error=<%s>)",
+                            OPEP,ppath,pid,strerror(errno));
+	goto TOOBAD;    //proces was NOT moved
 	}
+      isok=true;        //Mission accomplished
       break;
-    case 3	:	//move accomplished
-      isok=true;
-      break;
+    TOOBAD      :
     default	:	//SAFE Guard
       proceed=false;
       break;
@@ -1607,7 +1813,7 @@ PUBLIC uint16_t sys_get_numcpu(const char *contname)
 
 uint16_t nbr;
 FILE *fichier;
-const char *sysfs;
+char sysfs[512];
 char ppath[PATH_MAX];
 char data[200];
 
@@ -1616,7 +1822,7 @@ _Bool proceed;
 
 nbr=sysconf(_SC_NPROCESSORS_CONF);
 fichier=(FILE *)0;
-sysfs=sys_get_sysfs(cgr_containers);
+(void) sys_get_sysfs(sysfs,sizeof(sysfs),cgr_containers);
 (void) snprintf(ppath,sizeof(ppath),"/%s/%s/%s",
 				    sysfs,contname,"cpuset.cpus.effective");
 (void) memset(data,'\000',sizeof(data));
@@ -1785,6 +1991,67 @@ return isok;
 */
 /************************************************/
 /*						*/
+/*	Procedure used to make sure container   */
+/*      ressorces are well protected.           */
+/*						*/
+/************************************************/
+PUBLIC _Bool sys_attach_to_cgroup(const char *contname,pid_t cpid)
+
+{
+#define OPEP    "utlsys.c:sys_attach_to_cgroup"
+
+_Bool isok;
+int fd;
+int len;
+char sysfs[512];
+char ppath[PATH_MAX];
+char pid_str[16];
+int phase;
+_Bool proceed;
+
+isok=false;
+fd=-1;
+len=0;
+(void) sys_get_sysfs(sysfs,sizeof(sysfs),cgr_containers);
+(void) snprintf(ppath,sizeof(ppath),"%s/%s/cgroup.procs",sysfs,contname);
+pid_str[0]='\000';
+phase=0;
+proceed=true;
+while (proceed==true) {
+  //(void) log_alert(0,"%s JMPDBG phase=%d ppath=<%s>",OPEP,phase,ppath);
+  switch (phase) {
+    case 0      :       //let open cgroup
+      if ((fd=open(ppath,O_WRONLY))<0) {
+	(void) log_alert(0,"%s Unable to open file <%s> (error=<%s>)",
+			    OPEP,ppath,strerror(errno));
+	phase=999;	//trouble trouble
+        }
+      break;
+    case 1      :       //writing the pid to the file
+      len=snprintf(pid_str,sizeof(pid_str),"%d",cpid);
+      if (write(fd,pid_str,len)!=len) {
+	(void) log_alert(0,"%s Unable container pid to <%s> (error=<%s>)",
+			    OPEP,ppath,strerror(errno));
+	phase=999;	//trouble trouble
+        }
+      (void) close(fd);
+      break;
+    default	:	//SAFE Guard
+      isok=true;
+      proceed=false;
+      break;
+    }
+  phase++;
+  }
+return isok;
+
+#undef  OPEP
+}
+/*
+
+*/
+/************************************************/
+/*						*/
 /*	Procedure used to prepare kernel to 	*/
 /*	activate namespace.			*/
 /*						*/
@@ -1833,7 +2100,7 @@ _Bool isok;
 uint16_t numcpu;
 u_vlong usage;
 FILE *fichier;
-const char *sysfs;
+char sysfs[512];
 char ppath[PATH_MAX];
 char consigne[30];
 int phase;
@@ -1842,7 +2109,7 @@ _Bool proceed;
 isok=false;
 usage=(u_vlong)0;
 fichier=(FILE *)0;
-sysfs=sys_get_sysfs(cgr_containers);
+(void) sys_get_sysfs(sysfs,sizeof(sysfs),cgr_containers);
 (void) snprintf(ppath,sizeof(ppath),"/%s/%s",sysfs,CPUMAX);
 phase=0;
 proceed=true;
@@ -1880,7 +2147,7 @@ while (proceed==true) {
     case 4	:	//storing cpu max value within cgroup
       (void) fprintf(fichier,"%s\n",consigne);
       (void) fclose(fichier);
-      (void) log_alert(0,"%s, container <%s> cpu.max=<%s> (ratio=%5.2f%%)",
+      (void) log_alert(2,"%s, container <%s> cpu.max=<%s> (ratio=%5.2f%%)",
 			  OPEP,contname,consigne,ratio);
       isok=true;
       break;	
@@ -1911,16 +2178,16 @@ PUBLIC char *sys_get_cont_cpulist(const char *contname)
 
 char *list;
 FILE *fichier;
-const char *sysfs;
-char ppath[PATH_MAX];
+char sysfs[512];;
 char line[200];
+char ppath[PATH_MAX];
 int phase;
 _Bool proceed;
 
 list=(char *)0;
 fichier=(FILE *)0;
 line[0]='\000';
-sysfs=sys_get_sysfs(cgr_containers);
+(void) sys_get_sysfs(sysfs,sizeof(sysfs),cgr_containers);
 (void) snprintf(ppath,sizeof(ppath),"%s/%s/%s",sysfs,contname,"cpuset.cpus");
 phase=0;
 proceed=true;
@@ -1973,13 +2240,14 @@ return list;
 PUBLIC _Bool sys_set_cont_weight(const char *contname,double ratio)
 
 {
-#define	OPEP	"utlsys.c:sys_set_cont_weight"
+#define	OPEP	PRG":sys_set_cont_weight"
 #define	MAXW	10000		//cgroup V2 limit
 
 _Bool isok;
 u_vlong total_weight;
 FILE *fichier;
-const char *sysfs;
+const char *cpuweight;
+char sysfs[512];
 char ppath[PATH_MAX];
 int phase;
 _Bool proceed;
@@ -1987,27 +2255,41 @@ _Bool proceed;
 isok=true;
 total_weight=0;
 fichier=(FILE *)0;
-sysfs=sys_get_sysfs(cgr_containers);
-(void) snprintf(ppath,sizeof(ppath),"/%s/%s/%s",sysfs,"",WEIGHT);
+(void) sys_get_sysfs(sysfs,sizeof(sysfs),cgr_containers);
+ppath[0]='\000';
 phase=0;
 proceed=true;
 while (proceed==true) {
+  //(void) log_alert(0,"%s, JMPDBG Phase='%d'",OPEP,phase);
   switch (phase) {
-    case 0	:	//Reading the assigned the crgoup weight
+    case 0	:	//getting the CPUWEIGHT value
+      if ((cpuweight=getenv(CPUWEI))!=(const char *)0) {
+        u_vlong result;
+
+        result=strtoll(cpuweight,(char **)0,10);
+        (void) snprintf(ppath,sizeof(ppath),"%s/%s",sysfs,WEIGHT);
+        if ((sys_write_sys_long(ppath,result))==false) {
+	(void) log_alert(0,"%s Unable to store '%llu' to <%s> (Config?)",
+			    OPEP,result,ppath);
+          }
+        }
+      break;
+    case 1	:	//Reading the assigned the crgoup weight
+      (void) snprintf(ppath,sizeof(ppath),"/%s/%s/%s",sysfs,"",WEIGHT);
       if ((isok=sys_read_sys_long(ppath,&total_weight))==false) {
 	(void) log_alert(0,"%s Unable to get data from <%s> (Config?)",
 			    OPEP,ppath);
 	phase=999;	//No need to go further
 	}
       break;
-    case 1	:	//adjusting the weight according valeur ratio
+    case 2	:	//adjusting the weight according valeur ratio
       total_weight=(u_vlong)((total_weight*ratio)/100.0);
       if (total_weight<1)
 	total_weight = 1; 
       if (total_weight>MAXW)
 	total_weight=MAXW;
       break;
-    case 2	:	//adjusting the weight according valeur ratio
+    case 3	:	//adjusting the weight according valeur ratio
       (void) snprintf(ppath,sizeof(ppath),"/%s/%s/%s",sysfs,contname,WEIGHT);
       if ((fichier=fopen(ppath,"w"))==(FILE *)0) {
 	(void) log_alert(0,"%s Unable to open file <%s> (error=<%s>)",
@@ -2015,10 +2297,10 @@ while (proceed==true) {
 	phase=999;	//trouble trouble
 	}
       break;
-    case 3	:	//writing the new weight
+    case 4	:	//writing the new weight
       (void) fprintf(fichier,"%llu\n",total_weight);
       (void) fclose(fichier);
-      (void) log_alert(0,"%s, container <%s> cpu.weight='%llu' (ratio=%5.2f%%)",
+      (void) log_alert(2,"%s, container <%s> cpu.weight='%llu' (ratio=%5.2f%%)",
 			  OPEP,contname,total_weight,ratio);
       isok=true;
       break;
@@ -2045,12 +2327,12 @@ return isok;
 PUBLIC char *sys_get_cont_weight(const char *contname)
 
 {
-#define	OPEP	"utlsys.c:sys_get_weight_ratio"
+#define	OPEP	PRG":sys_get_weight"
 
 char *weight;
 u_vlong total_weight;
 u_vlong cont_weight;
-const char *sysfs;
+char sysfs[512];
 char ppath[PATH_MAX];
 int phase;
 _Bool proceed;
@@ -2058,7 +2340,7 @@ _Bool proceed;
 weight=(char *)0;
 total_weight=0;
 cont_weight=0;
-sysfs=sys_get_sysfs(cgr_containers);
+(void) sys_get_sysfs(sysfs,sizeof(sysfs),cgr_containers);
 ppath[0]='\000';
 phase=0;
 proceed=true;
@@ -2109,9 +2391,9 @@ PUBLIC char *sys_get_cont_ceiling(const char *contname)
 #define	OPEP	"utlsys.c:sys_get_ceiling"
 
 char *ceiling;
-const char *sysfs;
 FILE *fichier;
 char ppath[PATH_MAX];
+char sysfs[512];
 char line[100];
 char l1[50];
 u_vlong l2;
@@ -2119,7 +2401,7 @@ int phase;
 _Bool proceed;
 
 ceiling=(char *)0;
-sysfs=sys_get_sysfs(cgr_containers);
+(void) sys_get_sysfs(sysfs,sizeof(sysfs),cgr_containers);
 fichier=(FILE *)0;
 (void) snprintf(ppath,sizeof(ppath),"%s/%s/%s",sysfs,contname,CPUMAX);
 line[0]='\000';
@@ -2186,10 +2468,10 @@ _Bool isok;
 int count;
 int collected;
 FILE *fichier;
-const char *sysfs;
 CPUINF *cpuinf;
 char lines[CPTS][100];
 char keys[CPTS][50];
+char sysfs[512];
 char spath[PATH_MAX-100];
 char ppath[PATH_MAX];
 u_vlong values[CPTS];
@@ -2200,7 +2482,7 @@ isok=false;
 count=0;
 collected=0;
 fichier=(FILE *)0;
-sysfs=sys_get_sysfs(cgr_containers);
+(void) sys_get_sysfs(sysfs,sizeof(sysfs),cgr_containers);
 (void) memset(lines,'\000',sizeof(lines));
 (void) memset(keys,'\000',sizeof(keys));
 switch (cpuenu) {
@@ -2348,11 +2630,84 @@ PUBLIC double sys_get_cpu_idle(STATYP *status)
 
 {
 struct timeval tv;
-u_vlong working;
+vlong working;
 
 (void) gettimeofday(&tv,(struct timezone *)0);
 working=(((tv.tv_sec*1000000ULL)+tv.tv_usec)-status->start)*status->numcpu;
 return (double)((working-status->cpuinf[cpu_cont].usage)*100)/working;
+}
+/*
+
+*/
+/************************************************/
+/*						*/
+/*	Procedure to set the container boot time*/
+/*						*/
+/************************************************/
+PUBLIC _Bool sys_set_boot_time()
+
+{
+#define OPEP    PRG":sys_set_boot_time"
+
+_Bool isok;
+char path[64];
+char buf[128];
+struct sysinfo s_info;
+long uptime;
+int fd;
+int len;
+int phase;
+_Bool proceed;
+
+isok=false;
+path[0]='\000';
+buf[0]='\000';
+(void) memset(&s_info,'\000',sizeof(s_info));
+uptime=0;
+
+fd=-1;
+len=0;
+phase=0;
+proceed=true;
+while (proceed==true) {
+  switch (phase) {
+    case 0      :       //Get the host uptime
+      if (sysinfo(&s_info)<0) {
+        (void) log_alert(0,"%s Unable to get sysinfo (error=<%s>, systemd?)",
+                            OPEP,strerror(errno));
+        phase=999;
+        }
+      uptime=s_info.uptime-1;
+      break;
+    case 1      :       //prepare to set container Boot Time
+      (void) snprintf(path,sizeof(path),"/proc/self/timens_offsets");
+      if ((fd=open(path,O_WRONLY))<0) {
+        (void) log_alert(0,"%s Unable to open file <%s> (error=<%s>)",
+                            OPEP,path,strerror(errno));
+        phase=999;
+        }
+      break;
+    case 2      :       //preparing formating offset and writing
+      len=snprintf(buf,sizeof(buf),"%d %ld 0",CLOCK_BOOTTIME,-uptime);
+      if (write(fd,buf,len)!=len) {
+        (void) log_alert(0,"%s Unable to write <%s> to file <%s> (error=<%s>)",
+                            OPEP,buf,path,strerror(errno));
+        phase=999;
+        }
+      (void) close(fd);
+      break;
+    case 3      :       //everything fine
+      isok=true;
+      break;
+    default    :    //SAFE Guard
+      proceed=false;
+      break;
+    }
+  phase++;
+  }
+return isok;
+
+#undef  OPEP
 }
 /*
 
@@ -2365,7 +2720,7 @@ return (double)((working-status->cpuinf[cpu_cont].usage)*100)/working;
 /*	file is named 'starting'.		*/
 /*						*/
 /************************************************/
-PUBLIC _Bool sys_set_start(pid_t contpid)
+PUBLIC _Bool sys_set_start()
 
 {
 #define	OPEP	"utlsys.h:sys_set_start"
@@ -2397,7 +2752,7 @@ while (proceed==true) {
 	}
       break;
     case 1	:	
-      (void) snprintf(ppath,sizeof(ppath),"%s/%s/%s",homefs,INFODIR,STARTFS);
+      (void) snprintf(ppath,sizeof(ppath),"%s/%s",homefs,STARTFS);
       if ((fichier=fopen(ppath,"w"))==(FILE *)0) {
 	(void) log_alert(0,"%s Unable to open <%s> (error=<%s> system?)",
 			    OPEP,ppath,strerror(errno));
@@ -2406,89 +2761,11 @@ while (proceed==true) {
       break;
     case 2	:	//writing starting time
       isok=true;
-      (void) fprintf(fichier,"%d %llu\n",contpid,start);
+      (void) fprintf(fichier,"%llu\n",start);
       if (fclose(fichier)!=0) {
 	(void) log_alert(0,"%s Unable to close <%s> (error=<%s> system?)",
 			    OPEP,ppath,strerror(errno));
 	isok=false;
-	}
-      break;
-    default	:	//SAFE Guard
-      proceed=false;
-      break;
-    }
-  phase++;
-  }
-return isok;
-
-#undef	OPEP
-}
-/*
-
-*/
-/************************************************/
-/*						*/
-/*	Procedure to get the current time within*/
-/*	file available inside the contaner 	*/
-/*	'homefs'/infos/ directory, the file is	*/
-/*	named 'starting'.			*/
-/*	return 0 if not successful.		*/
-/*						*/
-/************************************************/
-PUBLIC _Bool sys_get_start(pid_t *contpid,u_vlong *start)
-
-{
-#define	OPEP	"utlsys.h:sys_get_start"
-
-_Bool isok;
-FILE *fichier;
-const char *homefs;
-char ppath[PATH_MAX];
-char line[100];
-int phase;
-_Bool proceed;
-
-isok=false;
-fichier=(FILE *)0;
-*start=(u_vlong)0;
-*contpid=(pid_t)0;
-homefs=getenv(HOMEFS);
-ppath[0]='\000';
-line[0]='\000';
-phase=0;
-proceed=true;
-while (proceed==true) {
-  //(void) log_alert(0,"%s JMPDBG phase='%d' ppath=<%s>",OPEP,phase,ppath);
-  switch (phase) {
-    case 0	:	//checking if we have homefs
-      if ((homefs==(char *)0)||(homefs[0]=='\000')) {
-	(void) log_alert(0,"%s missing homefs (Config? Bug!)",OPEP);
-	phase=999;
-	}
-      break;
-    case 1	:	
-      (void) snprintf(ppath,sizeof(ppath),"%s/%s/%s",homefs,INFODIR,STARTFS);
-      if ((fichier=fopen(ppath,"r"))==(FILE *)0) {
-	(void) log_alert(0,"%s Unable to open <%s> (error=<%s> system?)",
-			    OPEP,ppath,strerror(errno));
-	phase=999;	//no need to go further
-	}
-      break;
-    case 2	:	//writing starting time
-      if (fgets(line,sizeof(line),fichier)==(char *)0) {
-	(void) log_alert(0,"%s Unable to read <%s> file contents (config? Bug!?)",
-			    OPEP,ppath);
-	phase=999;	//no need to go further
-	}
-      (void) fclose(fichier);
-      break;
-    case 3	:	//reading value
-      isok=true;
-      if (sscanf(line,"%d %llu",contpid,start)!=2) {
-	(void) log_alert(0,"%s Unable to parse line <%s> (config? Bug!?)",
-			    OPEP,line);
-	isok=false;
-	phase=999;	//no need to go further
 	}
       break;
     default	:	//SAFE Guard
@@ -2513,7 +2790,7 @@ return isok;
 PUBLIC _Bool sys_get_host_loadavg(double *avgs,u_int taille)
 
 {
-#define OPEP    "utlsys.c:prc_get_host_loadavg"
+#define OPEP    PRG":sys_get_host_loadavg"
 
 _Bool isok;
 FILE *fichier;
@@ -2572,10 +2849,10 @@ return isok;
 /*	procedure call				*/
 /*						*/
 /************************************************/
-PUBLIC _Bool sys_cal_loadavg(STATYP *status)
+static _Bool sys_cal_loadavg(STATYP *status)
 
 {
-#define	OPEP	"utlsys.c:sys_cal_loadavg"
+#define	OPEP	PRG":sys_cal_loadavg"
 #define	MINPACE	0.01	//minimun space time calculation (10 ms)
 #define ZEROAVG "?.??  ?.??  ?.?? 0/0 0"
 
@@ -2590,7 +2867,6 @@ int phase;
 _Bool proceed;
 
 isok=false;
-(void) snprintf(loadavg,sizeof(loadavg),"%s",ZEROAVG);
 status->loadavg=loadavg;
 for (CPUENU c=cpu_host;c<cpu_unknown;c++)
    cur_load[c]=last_load[c];
@@ -2612,6 +2888,7 @@ while (proceed==true) {
         phase=999;      //No!; no need to update
       break;
     case 2	:	//computing ratio container/HOST
+      (void) snprintf(loadavg,sizeof(loadavg),"%s",ZEROAVG);
       if (status->delta_t>=MINPACE) {	//always
 	double delta_cpu[cpu_unknown];
 
@@ -2637,8 +2914,7 @@ while (proceed==true) {
 	}
       break;
     case 4	:	// extracting last_pid
-      if (get_last_pid(status)==false) 
-	phase=999;	// No last_pid??
+      (void) sys_get_last_pid(status->contname,&(status->last_pid));
       if (cnt_pids_current(status)==false)
 	phase=999;	// No PIDs_current??
       break;
@@ -2676,18 +2952,20 @@ return isok;
 /*	set initial value (as start,pid,name..) */
 /*						*/
 /************************************************/
-PUBLIC STATYP *sys_new_cont_status()
+PUBLIC STATYP *sys_new_cont_status(pid_t contpid)
 
 {
 #define	OPEP	"utlsys.c:sys_new_cont_status"
 
 STATYP *status;
+struct timeval tv;
 char *ptr;
 int phase;
 _Bool proceed;
 
+(void) gettimeofday(&tv,(struct timezone *)0);
 status=(STATYP *)calloc(1,sizeof(STATYP));
-(void) sys_get_start(&(status->contpid),&(status->start));
+status->contpid=contpid;
 ptr=(char *)0;
 phase=0;
 proceed=true;
@@ -2697,20 +2975,24 @@ while (proceed==true) {
     case 0	:	//set container name
       if ((ptr=getenv(NAME))==(char *)0) {
 	(void) log_alert(0,"%s Unable to get container name! (config?)",OPEP);
-	status=sys_free_cont_status(status);
-	phase=999;	//no need to go further
+        goto TOOBAD;
 	}
       break;
-    case 1	:	//ta
+    case 1	:	//getting the container start time
+      if ((status->start=get_start(contpid))==0) {
+	(void) log_alert(0,"%s Unable to get container <%s> start time (%s)",
+                            OPEP,ptr,"System?");
+        goto TOOBAD;
+        }  
+    case 2	:	//ta
       status->delta_t=0.0;
       if (clock_gettime(CLOCK_MONOTONIC,&(status->last_time))<0) {
          (void) log_alert(0,"%s Unable to get MONOTONIC clock! (error=<%s> %s)",
                             OPEP,strerror(errno),"system?");
-	status=sys_free_cont_status(status);
-        phase=999;      //We are in real real trouble. exiting at once
+        goto TOOBAD;
         }
       break;
-    case 2	:	//set container name
+    case 3	:	//set container name
       status->contname=strdup(ptr);
       status->cpumodel=strdup(get_cpu_model_name());
       status->cpuonl=sysconf(_SC_NPROCESSORS_ONLN);
@@ -2752,6 +3034,8 @@ while (proceed==true) {
       status->delta_t=0.011;
       (void) sys_cal_loadavg(status);
       break;
+    TOOBAD      :
+      status=sys_free_cont_status(status);
     default	:	//SAFE Guard
       proceed=false;
       break;
@@ -2913,6 +3197,174 @@ while (proceed==true) {
   phase++;
   }
 return isok;
+
+#undef	OPEP
+}
+/*
+
+*/
+/************************************************/
+/*						*/
+/*	Procedure to check if target is mounted */
+/*	in bind mode. If not, then do binding   */
+/*      en report false anyway                  */
+/*						*/
+/************************************************/
+PUBLIC _Bool sys_check_remount(const char *src,const char *tgt)
+
+{
+#define OPEP    PRG":sys_check_remount"
+
+_Bool needbind;
+_Bool dotmpfs;
+_Bool isok;
+struct stat st_src;
+struct stat st_tgt;
+struct statfs sf_tgt;
+int phase;
+_Bool proceed;
+
+needbind=false;
+dotmpfs=false;
+isok=false;
+phase=0;
+proceed=true;
+while (proceed==true) {
+  switch (phase) {
+    case 0      :       //Check source status
+      if (stat(src,&st_src)<0) {
+        goto TOOBAD;
+        }
+      break;
+    case 1      :       //Check target status
+      if (stat(tgt,&st_tgt)<0) {
+        goto TOOBAD;
+        }
+      break;
+    case 2      :       //cecking if target is a directory
+      if (S_ISDIR(st_tgt.st_mode)!=0) {
+
+        src="tmpfs";
+        dotmpfs=true;
+        if (statfs(tgt,&sf_tgt)<0)
+          goto TOOBAD;
+        }
+      break;
+    case 3      :       //mount already done
+      if (dotmpfs==true) 
+        isok=(sf_tgt.f_type==TMPFS_MAGIC);
+      else
+        isok=((st_src.st_dev==st_tgt.st_dev)&&(st_src.st_ino==st_tgt.st_ino));
+      if (isok==true)
+        phase++;        //No need to do mount
+      break;
+    case 4      :       //do binding
+      (void) log_alert(2,"%s Need to mount <%s> to <%s>",OPEP,src,tgt);
+      if (dotmpfs==false) {
+        isok=(mount(src,tgt,NULL,MS_BIND,NULL)==0);
+        if (isok==true) 
+          isok=(mount(src,tgt,NULL,MS_BIND|MS_REMOUNT|MS_RDONLY,NULL)==0);
+        } 
+      else
+        isok=(mount(src,tgt,src,MS_RDONLY,NULL)==0);
+      if (isok==false) 
+        (void) log_alert(0,"%s Unable to mount <%s> to <%s> (error=<%s>)",
+                            OPEP,src,tgt,strerror(errno));
+      //NO BREAK, report needbind as true anyway
+    TOOBAD      :
+      needbind=true;
+    default	:	//SAFE Guard
+      proceed=false;
+      break;
+    }
+  phase++;
+  }
+return needbind;
+
+#undef OPEP
+}
+
+/*
+
+*/
+/************************************************/
+/*						*/
+/*	Procedure to create an anonymous memory */
+/*	file from an existing file.             */
+/*	directory. Return memfd descriptor or   */
+/*	-1 if trouble		                */
+/*						*/
+/************************************************/
+PUBLIC int sys_get_memfd(const char *path,const char *memname)
+
+{
+#define	OPEP	PRG":sys_get_memfd"
+
+int mfd;
+int number;
+off_t offset;
+struct stat st;
+int src_fd;
+int phase;
+_Bool proceed;
+
+mfd=-1;
+number=0;
+offset=(off_t)0;
+phase=0;
+proceed=true;
+while (proceed==true) {
+  switch (phase) {
+    case 0	:	//Opening the source file
+      if ((src_fd=open(path,O_RDONLY))<0) {
+	(void) log_alert(0,"%s Unable to open source <%s> (error=<%s>)",
+			    OPEP,path,strerror(errno));
+	goto TOOBAD;
+	}
+      break;
+    case 1	:	//extracting the file status
+      if (fstat(src_fd,&st)<0) {
+	(void) log_alert(0,"%s Unable to 'fstat' destination <%s> (error=<%s>)",
+			    OPEP,path,strerror(errno));
+	(void) close(src_fd);
+	goto TOOBAD;
+	}
+      break;
+    case 2	:	//Opening the memfd
+      if ((mfd=memfd_create(memname,MFD_CLOEXEC))<0) {
+	(void) log_alert(0,"%s Unable to open memory file <%s> (error=<%s>)",
+			    OPEP,memname,strerror(errno));
+	(void) close(src_fd);
+	goto TOOBAD;
+	}
+      break;
+    case 3	:	//do transfer
+      if ((number=sendfile(mfd,src_fd,&offset,st.st_size))<0) {
+	(void) log_alert(0,"%s Unable to transfer source <%s> to <%s> (error=<%s>)",
+			    OPEP,path,memname,strerror(errno));
+        (void) close(mfd);
+        (void) close(src_fd);
+	goto TOOBAD;
+        }
+      (void) close(src_fd);
+      break;
+    case 4	:	//reseting the memory file position
+      if (lseek(mfd,0,SEEK_SET)<0) {
+	(void) log_alert(0,"%s Unable to reset mem file <%s> (error=<%s>)",
+			    OPEP,memname,strerror(errno));
+        (void) close(mfd);
+	goto TOOBAD;
+        } 
+      break;
+    TOOBAD	:
+      mfd=-1;
+    default	:	//SAFE Guard
+      proceed=false;
+      break;
+    }
+  phase++;
+  }
+return mfd;
 
 #undef	OPEP
 }

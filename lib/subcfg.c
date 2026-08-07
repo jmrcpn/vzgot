@@ -1,27 +1,9 @@
+// vim: smarttab tabstop=8 shiftwidth=2 expandtab
 /************************************************/
 /*						*/
 /*      Copyright:				*/
 /*	 Jean-Marc Pigeon <jmp@safe.ca>	 2018	*/
 /*						*/
-/************************************************/
-/* This program is free software; you can 	*/
-/* redistribute it and/or modify it under the 	*/
-/* terms of the GNU General Public License as	*/
-/* published by the Free Software Foundation	*/
-/* version 2 of the License			*/
-/*						*/
-/* This program is distributed in the hope that */
-/* it will be useful, but WITHOUT ANY WARRANTY; */
-/* without even the implied warranty of		*/
-/* MERCHANTABILITY or FITNESS FOR A PARTICULAR	*/
-/* PURPOSE.  See the GNU General Public License	*/
-/* for more details.				*/
-/*						*/
-/* You should have received a copy of the GNU	*/
-/* General Public License along with this 	*/
-/* program; if not, write to the Free Software	*/
-/* Foundation, Inc., 51 Franklin Street,	*/
-/* Fifth Floor, Boston, MA  02110-1301, USA.	*/
 /************************************************/
 /*						*/
 /*	Implement utility level procedure to	*/
@@ -41,6 +23,8 @@
 #include	"utlapl.h"
 #include	"utlprc.h"
 #include	"subcfg.h"
+
+#define	PRG	"subcfg.c"
 
 //vzgot configuration file
 #define	VZCONF	"vzgot_config"
@@ -64,12 +48,12 @@
 static int gesenv(char *filename,int toadd)
 
 {
-#define	OPEP	"utlcfg.c:gesenv,"
+#define	OPEP	PRG":gesenv"
 
 int status;
 FILE *fichier;
 
-status=1;
+status=-1;
 if ((fichier=fopen(filename,"r"))!=(FILE *)0) {
   u_int numline;
   char line[1000];
@@ -127,13 +111,13 @@ return status;
 /*	loading local variable related to one	*/
 /*	container(VPS)				*/
 /*	Return 0 if configuation is loaded	*/
-/*	1 otherwise.				*/
+/*	-1 otherwise.				*/
 /*						*/
 /************************************************/
 PUBLIC int cfg_loadconfig(const char *confdir,const char *contname)
 
 {
-#define	OPEP	"utlcfg.c:cfg_loadconfig"
+#define	OPEP	PRG":cfg_loadconfig"
 
 int status;
 char conffile[PATH_MAX];
@@ -146,7 +130,6 @@ if (confdir==(const char *)0)
 phase=0;
 proceed=true;
 while (proceed==true) {
-  //(void) log_alert(0,"%s, Phase='%d', confdir=<%s>",OPEP,phase,confdir);
   switch (phase) {
     case 0	:	/*Loading main config	*/
       (void) snprintf(conffile,sizeof(conffile),"%s/%s",confdir,VZCONF);
@@ -165,7 +148,7 @@ while (proceed==true) {
       break;
     }
   phase++;
-  if (status>0)
+  if (status<0)
     break;
   }
 return status;

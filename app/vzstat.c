@@ -31,6 +31,7 @@
 #include	<sys/wait.h>
 
 #include	"dbglog.h"
+#include	"lowapl.h"
 #include	"lowtyp.h"
 #include	"utlapl.h"
 #include	"utlprc.h"
@@ -40,6 +41,8 @@
 #include	"unilck.h"
 
 #define VZSTAT  "vzstat"
+
+#define PRG     VZSTAT
 
 /*
 
@@ -79,6 +82,7 @@ static void usage()
 int main(int argc,char *argv[])
 
 {
+#define OPEP            PRG":main"
 #define PACE 5.0
 #define CSI             "["
 #define HIDECUR         "[?25l"
@@ -89,6 +93,7 @@ int main(int argc,char *argv[])
 int status;
 char c;
 const char *contname;
+pid_t cont_pid;
 TPLPTR *tpl;
 char *confdir;
 _Bool repeat;
@@ -96,6 +101,7 @@ _Bool proceed;
 int phase;
 
 appname=VZSTAT;
+cont_pid=(pid_t)0;
 tpl=(TPLPTR *)0;
 confdir=(char *)0;
 repeat=false;
@@ -130,7 +136,6 @@ phase=0;
 proceed=(status==0);
 (void) apl_settrap(true);
 while (proceed==true) {
-  //(void) log_alert(0,"%s JMPDBG phase='%d' contname=<%s>",appname,phase,contname);
   switch (phase) {
     case 0      :       //do we have a container name
       if (argc<=optind) {
@@ -143,20 +148,27 @@ while (proceed==true) {
       if (cfg_loadconfig(confdir,contname)!=0) 
         phase=999;      //Unable to load container configuration?
       break;
-    case 2      :       //loading the container
-      if ((tpl=cfg_open_online(confdir,contname,getenv(ONLINETPL)))==(TPLPTR *)0) {
+    case 2      :       //getting the container pid
+      if ((cont_pid=cnt_get_cont_pid(contname))==(pid_t)0) {
+        (void) log_alert(0,"%s container <%s> is not found up and running",
+                            OPEP,contname);
+        phase=999;      //trouble trouble
+        }
+      break;
+    case 3      :       //loading the container
+      if ((tpl=cfg_open_online(confdir,cont_pid,getenv(ONLINETPL)))==(TPLPTR *)0) {
         (void) log_alert(0,"%s unable to open <%s> template within config",
                             appname,getenv(ONLINETPL));
         phase=999;      //trouble trouble
         }
       break;
-    case 3      :       //init display
+    case 4      :       //init display
       if (repeat==true) {
         (void) fprintf(stdout,"%s%s%s",HIDECUR,POS00,CLEARSCR);
         (void) fflush(stdout);
         }
       break;
-    case 4      :       //display online information
+    case 5      :       //display online information
       if (repeat==true) {
         (void) fprintf(stdout,"%s",POS00);
         (void) fflush(stdout);
@@ -172,7 +184,7 @@ while (proceed==true) {
           phase--;      //lets do it again
         }
       break;
-    case 5      :       //closing the tpl structure
+    case 6      :       //closing the tpl structure
       if (repeat==true) {
         (void) fprintf(stdout,"%s",SHOWCUR);
         (void) fflush(stdout);
@@ -191,4 +203,12 @@ argv=prc_cleantitle();
 (void) apl_settrap(false);
 (void) apl_trapsegv(false);
 exit(status);
+
+#define CLEARSCR        "[0J"
+#define POS00           "[1;1H"
+#define SHOWCUR         "[?25h"
+#define HIDECUR         "[?25l"
+#define CSI             "["
+#define PACE 5.0
+#define OPEP            PRG":main"
 }

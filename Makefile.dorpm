@@ -3,7 +3,7 @@
 #--------------------------------------------------------------------
 APLR	=  $(APPNAME)-$(VERSION)
 #--------------------------------------------------------------------
-binary	:  rpm
+binary	:  dorpm
 	   @ echo "Making RPM binary"
 	   # echo $(RPMDIR)
 	   @ rpmbuild						\
@@ -13,7 +13,7 @@ binary	:  rpm
 		$(RPMDIR)/SRPMS/$(APPNAME)-$(VERSION)*.src.rpm
 	   @ echo "RPM binary completed"
 
-rpm	:  spec vztar
+dorpm	:  spec vztar
 	   @ echo "Making RPM src"
 	   @ rm -fr 						\
 		$(RPMDIR)/SOURCES				\
@@ -28,7 +28,11 @@ rpm	:  spec vztar
 	   @ rm -f spec
 	   @ echo "RPM src completed"
 
+cleanbld:
+	   @ rm -fr $(RPMDIR)/*
+
 #--------------------------------------------------------------------
+DEB_DATE=$(shell date -R)
 PACKAGER?= To be defined
 DIST	?= .dvl
 RPM_DATE = $(shell date "+%a %b %d %Y")
@@ -43,6 +47,25 @@ spec	:  $(APPNAME).spec.in
 	     -e 's/@@PACKAGER@@/$(PACKAGER)/g'			\
 	     -e 's/@@CHANGELOG@@/$(CHANGELOG)/g'		\
 	     < $< > $@
+	   @ sed						\
+             -e 's/@@DIST@@/$(DIST)/g' 				\
+	     -e 's/@@APPN@@/$(APPNAME)/g'			\
+	     -e 's/@@VERSION@@/$(VERSION)/g'			\
+	     -e 's/@@RELEASE@@/$(RELEASE)/g'			\
+	     -e 's/@@PACKAGER@@/$(PACKAGER)/g'			\
+	     -e 's/@@CHANGELOG@@/$(CHANGELOG)/g'		\
+	     -e 's/@@DATE@@/$(DEB_DATE)/g'			\
+	     < debian/changelog.in > debian/changelog
+	   @ sed						\
+             -e 's/@@DIST@@/$(DIST)/g' 				\
+	     -e 's/@@APPN@@/$(APPNAME)/g'			\
+	     -e 's/@@VERSION@@/$(VERSION)/g'			\
+	     -e 's/@@RELEASE@@/$(RELEASE)/g'			\
+	     -e 's/@@PACKAGER@@/$(PACKAGER)/g'			\
+	     -e 's/@@CHANGELOG@@/$(CHANGELOG)/g'		\
+	     -e 's/@@DATE@@/$(DEB_DATE)/g'			\
+	     < debian/control.in > debian/control
+
 #--------------------------------------------------------------------
 vztar	:  doapl
 	   @ tar zcf $(APLR).tar.gz $(APLR)
@@ -54,19 +77,17 @@ doapl	:
 	   @ mkdir -p						\
 		$(APLR)/apparmor				\
 		$(APLR)/conf					\
-		$(APLR)/lib					\
-		$(APLR)/app					\
+		$(APLR)/contrib					\
+		$(APLR)/distributions				\
 		$(APLR)/etc					\
-		$(APLR)/cgroup.d				\
 		$(APLR)/etc/sysconfig				\
 		$(APLR)/etc/snmp				\
+		$(APLR)/lib					\
 		$(APLR)/shell					\
 		$(APLR)/systemd					\
 		$(APLR)/sysv					\
 		$(APLR)/utilities				\
-		$(APLR)/contrib
-	   @ #adding group information
-	   @ cp -ap cgroup.d/devices.* $(APLR)/cgroup.d
+		$(APLR)/app
 	   @ #adding application sources
 	   @ cp -a apparmor/* $(APLR)/apparmor/
 	   @ cp -a app/*.c $(APLR)/app/
@@ -77,6 +98,10 @@ doapl	:
 	   @ cp -a systemd/* $(APLR)/systemd/
 	   @ cp -a sysv/* $(APLR)/sysv/
 	   @ cp -a contrib/* $(APLR)/contrib
+	   @ cp -a distributions/* $(APLR)/distributions
+	   @ cp -a vztemplates $(APLR)/
+	   @ #adding debian packageing information
+	   @ cp -a debian $(APLR)/
 	   @ #adding configuration file
 	   @ cp -a						\
 	   	conf/online.tpl					\
@@ -96,6 +121,7 @@ doapl	:
 	   @ cp -a 						\
 		Makefile					\
 		Makefile.dorpm					\
+		Makefile.debian					\
 		Makefile.vers					\
 		$(APPNAME).spec.in				\
 	      	$(APLR)/
@@ -106,7 +132,7 @@ doapl	:
 #--------------------------------------------------------------------
 #installing application
 INITDIR ?= /etc/rc.d/init.d
-
+SYSTEMD	?= /usr/lib/systemd
 install	:
 	   @ install -d $(DESTDIR)/usr/sbin/
 	   @ install -d $(DESTDIR)/var/run/$(APPNAME)
@@ -114,20 +140,33 @@ install	:
 	   @ install app/vzgot $(DESTDIR)/usr/sbin
 	   @ #adding utlities,tests program
 	   @ install -d $(DESTDIR)/usr/libexec/$(APPNAME)/utilities
-	   @ install app/vzstat $(DESTDIR)/usr/libexec/$(APPNAME)/
-	   @ install utilities/{tstavg,setcpu}				\
+	   @ install							\
+		   utilities/tstavg					\
+		   utilities/setcpu					\
 		$(DESTDIR)/usr/libexec/$(APPNAME)/utilities/
+	   @ # adding container monitoring
+	   @ install -d $(DESTDIR)/usr/libexec/$(APPNAME)/bin
+	   @ install							\
+	  	app/vzstat						\
+	  	app/vzmon						\
+	   	$(DESTDIR)/usr/libexec/$(APPNAME)/bin
 	   @ #adding init file
 	   @ install -d $(DESTDIR)/$(INITDIR)
 	   @ # Adding sysctl configuration file
 	   @ install -d $(DESTDIR)/etc/sysctl.d
 	   @ install -m 0644 conf/sysctl.conf				\
-		   $(DESTDIR)/etc/sysctl.d/$(APPNAME).conf
+		$(DESTDIR)/etc/sysctl.d/$(APPNAME).conf
 	   @ #adding configuration file
 	   @ install -d $(DESTDIR)/etc/$(APPNAME)
+	   @ cp -a 							\
+		distributions						\
+	   	$(DESTDIR)/etc/$(APPNAME)
 	   @ install -m 0644 conf/vzgot_config $(DESTDIR)/etc/$(APPNAME)
 	   @ install -m 0644 conf/vzgot_list $(DESTDIR)/etc/$(APPNAME)
 	   @ install -m 0644 conf/online.tpl $(DESTDIR)/etc/$(APPNAME)
+	   @ install -d $(DESTDIR)/var/lib/$(APPNAME)/vztemplate
+	   @ cp -ap vztemplates $(DESTDIR)/var/lib/$(APPNAME)/
+	   @ cp -ap etc $(DESTDIR)/var/lib/$(APPNAME)
 	   @ install -d $(DESTDIR)/var/lib/$(APPNAME)
 	   @ cp -ap etc $(DESTDIR)/var/lib/$(APPNAME)
 	   @ install -d $(DESTDIR)/var/lib/$(APPNAME)/etc/ssh
@@ -135,7 +174,6 @@ install	:
 	   @ install -d $(DESTDIR)/var/lib/$(APPNAME)/etc/ssh/access
 	   @ install -d $(DESTDIR)/var/lib/$(APPNAME)/etc/sysconfig
 	   @ cp -ap contrib $(DESTDIR)/var/lib/$(APPNAME)
-	   @ cp -ap cgroup.d $(DESTDIR)/var/lib/$(APPNAME)
 	   @ #adding apparmor profile
 	   @ install -d $(DESTDIR)/etc/apparmor.d/
 	   @ cp -ap							\
@@ -148,12 +186,13 @@ install	:
 	   @ install -d $(DESTDIR)/usr/libexec/$(APPNAME)/shell
 	   @ install shell/vzgot.* $(DESTDIR)/usr/libexec/$(APPNAME)/shell/
 	   @ install shell/vzctl.* $(DESTDIR)/usr/libexec/$(APPNAME)/shell/
+	   @ install -d $(DESTDIR)/var/lib/$(APPNAME)/systemd/
+	   @ install -vD						\
+		sysv/ok_init.sh $(DESTDIR)/var/lib/$(APPNAME)/systemd/$(APPNAME).init
 	   @ install -vD						\
 	   	sysv/ok_init.sh $(DESTDIR)/$(INITDIR)/$(APPNAME)
-	   @ install -vD						\
-		systemd/vzgot.init -t $(DESTDIR)/var/lib/$(APPNAME)/systemd
 	   @ install -vDm0640						\
-		systemd/vzgot.service -t $(DESTDIR)/usr/lib/systemd/system/
+		systemd/vzgot.service -t $(DESTDIR)$(SYSTEMD)/system/
 	   @ install -vDm0640						\
 		systemd/vz-br0.nmconnection				\
 		-t $(DESTDIR)/etc/NetworkManager/system-connections/

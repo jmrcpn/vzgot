@@ -34,9 +34,6 @@
 #include	<stdbool.h>
 
 
-/*vzgot application name			*/
-#define	VZGOT		"vzgot"
-
 /*	environement KEY			*/
 //ENV SYSF value
 #define	VZCGROUP	"VZCGROUP"

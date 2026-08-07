@@ -10,6 +10,10 @@ VZ_EXEC_LIB=/usr/libexec/vzgot
 # Container default home installation directory on HOST
 VZDIR=/vzgot/test
 #==============================================================================
+#MASTER_PUB is the file where your official authorised key file is stored
+#If not specified, vzgot create is using /root/.ssh/authorized_keys
+#MASTER_PUB=/etc/vzgot/masterpub_key
+#==============================================================================
 # BRIDGENAME is the bridge interface configured on the HOST
 BRIDGENAME="vz-br0"
 #==============================================================================
@@ -23,8 +27,7 @@ NETIP6="fc00"
 #==============================================================================
 # CGROUP directory
 # This is the cgroupv2 mount point.
-# Note: No bind mount required as cgroup v2 manages hierarchy via directories.
-VZCGROUP="/sys/fs/cgroup/vzgot"
+CGROUP="/sys/fs/cgroup"
 #==============================================================================
 # Container filesystem type (ext4, lvm, zfs)
 VZFS=ext4
@@ -87,6 +90,19 @@ PIDMAX=100.0
 #============================================================
 # VZGOT CPU RESOURCE MANAGEMENT DEFINITIONS
 #============================================================
+
+# CPUWEIGHT (Base CPU Weight / cgroup v2)
+#-----------------------------------------
+#- Description: Specifies the raw static weight assigned to the container's 
+#  cgroup (corresponds directly to cgroup v2: cpu.weight). 
+#  Accepts values from 1 (lowest priority) to 10000 (highest priority).
+#- Kernel Requirement: CONFIG_CGROUP_SCHED=y and CONFIG_CGROUP_CPU=y
+#- Logic: Works in tandem with PWRCPU. While CPUWEIGHT defines the baseline 
+#  scheduling weight of the container, PWRCPU acts as the active throttle/scale 
+#  factor applied to this base value during runtime VZGOT family arbitrage.
+#- Goal: Sets the foundation for proportional CPU resource sharing during 
+#  periods of CPU contention.
+CPUWEIGHT=10000
 
 # PWRCPU (Weight / Relative Priority)
 #-----------------------------------

@@ -1,3 +1,4 @@
+// vim: smarttab tabstop=8 shiftwidth=2 expandtab
 /************************************************/
 /*						*/
 /*      Copyright:				*/
@@ -16,6 +17,7 @@
 #include	<sys/prctl.h>
 #include	<ctype.h>
 #include	<errno.h>
+#include	<fcntl.h>
 #include	<limits.h>
 #include	<malloc.h>
 #include	<signal.h>
@@ -30,8 +32,11 @@
 #include	<unistd.h>
 #include	"dbglog.h"
 #include	"lowtyp.h"
+#include	"lowapl.h"
 #include	"version.h"
 #include	"utlapl.h"
+
+#define	PRG	"utlapl.c"
 
 /*sigterm request flag				*/
 	int sigterm=false;
@@ -44,8 +49,6 @@
 /*sigcont request flag container to start	*/
 	int sigcont=false;
 
-/*application name				*/
-	char	*appname=VZGOT;
 //pending signal activiy and count
 static volatile sig_atomic_t signal_counts[_NSIG]; 
 static volatile sig_atomic_t signal_pending[_NSIG];
@@ -203,37 +206,6 @@ if (stat(dirpath,&bufstat)==0) {
     }
   }
 return status;
-}
-/*
-
-*/
-/************************************************/
-/*						*/
-/*	Procedure to free memory used by a	*/
-/*	string, do not proceed if point is NULL.*/
-/*						*/
-/************************************************/
-char *apl_freestr(char *str)
-
-{
-if (str!=(char *)0) {
-  (void) free(str);
-  }
-return (char *)0;
-}
-/*
-
-*/
-/************************************************/
-/*						*/
-/*	Procedure to extract and return current	*/
-/*	version number.				*/
-/*						*/
-/************************************************/
-const char *apl_getvers()
-
-{
-return VERSION"."RELEASE;
 }
 /*
 ^L
@@ -535,94 +507,6 @@ if ((debug>=dlevel)&&(argv[0]!=(char *)0)) {
 */
 /************************************************/
 /*						*/
-/*	Procedure to 'compute' an application 	*/
-/*	directory according dir enum value	*/
-/*						*/
-/************************************************/
-char *apl_appdir(DIRENUM dir)
-
-{
-char *appdir;
-char *sysbase;
-char *apvers;
-char *subdir;
-
-sysbase=(char *)0;
-appdir=(char *)0;
-apvers=apl_getapvers();
-subdir="";
-switch (dir) {
-  case (d_null)		:
-    sysbase="";
-    apvers=""; 
-    break;
-  case (d_tmp)		:
-    sysbase="/var/tmp";
-    apvers=VZGOT"/"; 
-    break;
-  case (d_crash)	:
-    sysbase="/var/crash";
-    break;
-  case (d_etc)		:
-    sysbase="/etc";
-    apvers=VZGOT"/"; 
-    break;
-  case (d_spool)	:
-    sysbase="/var/spool";
-    break;
-  case (d_lock)		:
-    sysbase="/run";
-    apvers=VZGOT"/";
-    break;
-  case (d_vzgot)	:
-    sysbase="/var/lib";
-    apvers=VZGOT;
-    subdir="/vzdir";	
-    break;
-  case (d_log)		:
-    sysbase="/var/spool";
-    subdir="logs";
-    break;
-  case (d_ubin)		:
-    sysbase="/usr/bin";
-    apvers=""; 
-    break;
-  case (d_usbin)	:
-    sysbase="/usr/sbin";
-    apvers=""; 
-    break;
-  case (d_varlib)	:
-    sysbase="/var/lib";
-    apvers=VZGOT; 
-    break;
-  case (d_usrlib)	:
-    sysbase="/usr/lib";
-    break;
-  case (d_libexec)	:
-    sysbase="/usr/libexec";
-    apvers=VZGOT; 
-    break;
-  default		:
-    /*something impossible !?		*/
-    break;
-  }
-if (sysbase!=(char *)0) {
-  int taille;
-
-  taille=strlen(sysbase);
-  taille+=strlen(apvers);
-  taille+=strlen(subdir);
-  taille+=4;	//spare space
-  appdir=(char *)calloc(taille,sizeof(char)); 
-  (void) snprintf(appdir,taille,"%s/%s%s",sysbase,apvers,subdir);
-  }
-return appdir;
-}
-/*
-
-*/
-/************************************************/
-/*						*/
 /*	Procedure to set the SIGV signal trap	*/
 /*	purpose is to CORE_DUMP in case we have	*/
 /*	a memory failure of some kind.		*/
@@ -838,33 +722,6 @@ return strloc;
 */
 /************************************************/
 /*						*/
-/*	Procedure to application+version name	*/
-/*						*/
-/************************************************/
-char *apl_getapvers()
-
-{
-static char *apvers=(char *)0;
-
-if (apvers==(char *)0) {
-  static char apinfo[50];
-
-  char *ptr;
-  char version[30];
-
-  (void) strcpy(version,apl_getvers());
-  if ((ptr=strchr(version,'-'))!=(char *)0)
-    *ptr='\000';
-  (void) snprintf(apinfo,sizeof(apinfo),"%s-%s/",appname,version);
-  apvers=apinfo;
-  }
-return apvers;
-}
-/*
-
-*/
-/************************************************/
-/*						*/
 /*	Procedure to convert a string to a code,*/
 /*	remaining of the string is copy at the	*/
 /*	beginning.				*/
@@ -989,7 +846,7 @@ for (int i=0;i<_NSIG;i++) {
     continue;
   count+=signal_counts[i];
   if (signal_counts[i]>1)
-    (void) log_alert(0,"%s multiple '%d' signal '%s' pending!",
+    (void) log_alert(3,"%s multiple '%d' signal '%s' pending!",
 			OPEP,signal_counts[i],strsignal(i));
   signal_counts[i]=0;
   switch (i) {
@@ -1004,7 +861,7 @@ for (int i=0;i<_NSIG;i++) {
       sigterm=true;
       break;
     case SIGCHLD	:
-      (void) log_alert(0,"%s child process stopped or terminated",OPEP);
+      (void) log_alert(2,"%s child process stopped or terminated",OPEP);
       break;
     case SIGUSR1	:
       debug++;
@@ -1065,7 +922,7 @@ return convert;
 */
 /************************************************/
 /*						*/
-/*	Procedure to  return the default config	*/
+/*	Procedure to return the default config	*/
 /*	full path				*/
 /*						*/
 /************************************************/

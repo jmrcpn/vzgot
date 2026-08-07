@@ -1,27 +1,4 @@
-/************************************************/
-/*						*/
-/*      Copyright:				*/
-/*	 Jean-Marc Pigeon <jmp@safe.ca>	 2026	*/
-/*						*/
-/************************************************/
-/* This program is free software; you can 	*/
-/* redistribute it and/or modify it under the 	*/
-/* terms of the GNU General Public License as	*/
-/* published by the Free Software Foundation	*/
-/* version 2 of the License			*/
-/*						*/
-/* This program is distributed in the hope that */
-/* it will be useful, but WITHOUT ANY WARRANTY; */
-/* without even the implied warranty of		*/
-/* MERCHANTABILITY or FITNESS FOR A PARTICULAR	*/
-/* PURPOSE.  See the GNU General Public License	*/
-/* for more details.				*/
-/*						*/
-/* You should have received a copy of the GNU	*/
-/* General Public License along with this 	*/
-/* program; if not, write to the Free Software	*/
-/* Foundation, Inc., 51 Franklin Street,	*/
-/* Fifth Floor, Boston, MA  02110-1301, USA.	*/
+// vim: smarttab tabstop=8 shiftwidth=2 expandtab
 /************************************************/
 /*						*/
 /*	Implement a very sub level procedure to */
@@ -29,6 +6,7 @@
 /*						*/
 /************************************************/
 #include	<stdio.h>
+#include	<time.h>
 #include	<string.h>
 #include	<syslog.h>
 
@@ -76,8 +54,21 @@ char strloc[STRMAX];
 (void) snprintf(lvl,sizeof(lvl),"(dl=%02d) ",dlevel);
 (void) memset(strloc,'\000',sizeof(strloc));
 (void) vsnprintf(strloc,sizeof(strloc)-1,fmt,ap);
-if ((foreground==true)&&(verbose==true))
-  (void) fprintf(stderr,"%s%s\n",lvl,strloc);
+if (foreground==true) {
+  if (verbose==true)
+    (void) fprintf(stderr,"%s%s\n",lvl,strloc);
+  else {
+    char time_str[64];
+    struct tm time_info;
+    time_t curtime;
+
+    (void) snprintf(time_str,sizeof(time_str),"%s","Date/time?");
+    curtime=time((time_t *)0);
+    if (localtime_r(&curtime,&time_info)!=(struct tm *)0) 
+      (void)strftime(time_str,sizeof(time_str),"%F %T",&time_info);
+    (void) fprintf(stderr,"%s %s%s\n",time_str,lvl,strloc);
+    }  
+  }
 else {
   char *ptr;
   int taille;
