@@ -67,6 +67,7 @@ long their kernel is a Linux one
 %{_prefix}/libexec/%{name}/shell/%{name}.boot.Debian
 %{_prefix}/libexec/%{name}/shell/%{name}.boot.Fedora
 %{_prefix}/libexec/%{name}/shell/%{name}.boot.Gentoo
+%{_prefix}/libexec/%{name}/shell/%{name}.boot.Opensuse
 %{_prefix}/libexec/%{name}/shell/%{name}.boot.Osukiss
 %{_prefix}/libexec/%{name}/shell/%{name}.boot.Ubuntu
 %{_prefix}/libexec/%{name}/shell/%{name}.boot.Void
@@ -76,6 +77,7 @@ long their kernel is a Linux one
 %{_prefix}/libexec/%{name}/shell/%{name}.create.Debian
 %{_prefix}/libexec/%{name}/shell/%{name}.create.Fedora
 %{_prefix}/libexec/%{name}/shell/%{name}.create.Gentoo
+%{_prefix}/libexec/%{name}/shell/%{name}.create.Opensuse
 %{_prefix}/libexec/%{name}/shell/%{name}.create.Osukiss
 %{_prefix}/libexec/%{name}/shell/%{name}.create.Ubuntu
 %{_prefix}/libexec/%{name}/shell/%{name}.create.Void

@@ -3,7 +3,7 @@
 #--------------------------------------------------------------------
 APLR	=  $(APPNAME)-$(VERSION)
 #--------------------------------------------------------------------
-binary	:  dorpm
+dorpm	:  srcrpm
 	   @ echo "Making RPM binary"
 	   # echo $(RPMDIR)
 	   @ rpmbuild						\
@@ -13,7 +13,7 @@ binary	:  dorpm
 		$(RPMDIR)/SRPMS/$(APPNAME)-$(VERSION)*.src.rpm
 	   @ echo "RPM binary completed"
 
-dorpm	:  spec vztar
+srcrpm	:  spec vztar
 	   @ echo "Making RPM src"
 	   @ rm -fr 						\
 		$(RPMDIR)/SOURCES				\

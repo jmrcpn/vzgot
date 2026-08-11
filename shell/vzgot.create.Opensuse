@@ -1,4 +1,4 @@
-#! /usr/bin/bash
+#! /usr/bin/bash 
 #----------------------------------------------------
 #shell used to prepare container rootfs according
 #distribution type
@@ -39,7 +39,7 @@ if [ -f ${CONTDIR}/vzgot_config ] ; then
 #----------------------------------------------------
 VZROOT=${CONTDIR}/rootfs
 #====================================================
-#procedure to implement Fedora distribution file
+#procedure to implement Opensuse distribution file
 #----------------------------------------------------
 #Prepare /etc/hosts file
 HOSTS="/${VZDIR}/${CONTNAME}/rootfs/etc/hosts"
@@ -74,8 +74,11 @@ if [ -f /etc/resolv.conf ] ; then
 
 #----------------------------------------------------
 #set network in manual mode
-NDIR=${VZROOT}/etc/systemd/network/
-INTER=${NDIR}/80-container-eth0.network
+NDIR=${VZROOT}/etc/sysconfig/network/
+mkdir -p ${NDIR}
+
+INTER=${NDIR}/ifcfg-eth0
+ROUTE=${NDIR}/ifroute-eth0
 
 if [ -n ${LSTIP} ] ; then
   ETH0=`echo ${LSTIP} | tr ',' ' ' | cut -d' ' -f1`
@@ -84,24 +87,22 @@ if [ -n ${LSTIP} ] ; then
   echo "#----------------------------------------------------"
   echo "# vzgot Network Initialization"
   echo "#----------------------------------------------------"
-  echo "[Match]"
-  echo "Name=eth0"
+  echo "STARTMODE='auto'"
+  echo "BOOTPROTO='static'"
   echo ""
-  echo "[Network]"
-  echo "Address=${ETH0}/32"
-  echo ""
-  echo "[Route]"
-  echo "Destination=192.0.2.1/32"
-  echo "Scope=link"
-  echo ""
-  echo "[Route]"
-  echo "Gateway=192.0.2.1"
-  echo "GatewayOnLink=true"
+  echo "IPADDR='${ETH0}/32'"
   echo ""
   ) >> ${INTER}
+  (
+  echo "#----------------------------------------------------"
+  echo "# vzgot Network Initialization"
+  echo "#----------------------------------------------------"
+  echo "192.0.2.1/32 - - eth0 scope link"
+  echo "default 192.0.2.1 - eth0"
+  echo ""
+  ) >> ${ROUTE}
  fi
 
-mv ${NDIR}/eth0.network ${NDIR}/eth0.network.disabled
 
 #----------------------------------------------------
 #Prepare directoy /etc/fstab
@@ -160,6 +161,26 @@ ln -sf /dev/null "${VZROOT}/etc/systemd/system/systemd-remount-fs.service"
 
 #====================================================
 #adding default iptables
+cat >  ${VZROOT}/usr/lib/systemd/system/iptables.service << EOT
+
+[Unit]
+Description=IPv4 Packet Filtering Framework (iptables)
+DefaultDependencies=no
+After=systemd-modules-load.service
+Before=network-pre.target
+Wants=network-pre.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/iptables-restore /etc/sysconfig/iptables
+ExecStop=/usr/sbin/iptables-flush
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+
+EOT
+
 #activating service
 mkdir -p "${VZROOT}/etc/systemd/system/multi-user.target.wants"
 ln -sf \
@@ -169,6 +190,12 @@ ln -sf \
 mkdir -p "${VZROOT}/etc/sysconfig/"
 cp -a ${VZ_DATA_LIB}/etc/sysconfig/iptables	\
       ${VZROOT}/etc/sysconfig/iptables
+
+#activating ssh server service
+ln -sf \
+  "/usr/lib/systemd/system/sshd.service" \
+  "${VZROOT}/etc/systemd/system/multi-user.target.wants/sshd.service"
+
 
 #====================================================
 exit 0
