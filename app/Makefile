@@ -48,7 +48,7 @@ $(EXE)	:  $(OBJS) $(VZLIB)
 	   @ $(LD) $(LDFLAGS) -o $@ $@.o $(LIBS)
 
 $(STA)	:  $(OBJS) $(VZLIB)
-	   $(LD) $(LDFLAGS) -static-pie -o $@ $@.o $(LIBS)
+	   $(LD) $(LDFLAGS) -pie -o $@ $@.o $(LIBS)
 
 #--------------------------------------------------------------------
 vzmon.o	:							\
