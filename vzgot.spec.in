@@ -1,5 +1,6 @@
 #-----------------------------------------------------------------------------
 %{?!dist:	%define	dist	@@DIST@@}
+%bcond_with	debug
 #-----------------------------------------------------------------------------
 Name		:	@@APPN@@
 Version		:	@@VERSION@@
@@ -19,6 +20,10 @@ BuildRequires	:	gcc
 BuildRequires	:	make
 BuildRequires	:	libcap-devel
 BuildRequires	:	kernel-headers
+
+%if %{with debug}
+BuildRequires:  libasan-devel
+%endif
 
 Requires	:	bash
 Requires	:	bc
@@ -251,9 +256,16 @@ This package allow to have vzgot with apparmor facilities
 %build
 
 %define _smp_mflags -j%(/usr/bin/getconf _NPROCESSORS_ONLN)
+
+%if %{with debug}
 %{__make}						\
 	%{?_smp_mflags}					\
-	prod
+	clean debug
+%else
+%{__make}						\
+	%{?_smp_mflags}					\
+	clean prod
+%endif
 
 date > %{name}-%{version}-%{release}.build_date
 

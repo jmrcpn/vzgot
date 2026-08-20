@@ -273,9 +273,9 @@ PUBLIC _Bool mon_monitoring()
 #define MONTINF "/proc/self/mountinfo"
 
 u_long cptevents;
+int mnt_inf;
 const DEVTYP *specdevs;
 struct sigaction sa;
-int mnt_inf;
 struct pollfd fds[1];
 int phase;
 _Bool proceed;
@@ -284,11 +284,12 @@ verbose=false;
 foreground=true;
 keep_running=true;
 cptevents=0;
+mnt_inf=-1;
+specdevs=apl_get_specdevs();
 (void) memset(&sa,'\000',sizeof(sa));
 (void) log_alert(1,"%s, Starting monitoring as PID='%d'",OPEP,getpid());
 sa.sa_handler = handle_shutdown;
 (void) sigaction(SIGTERM,&sa,NULL);
-specdevs=apl_get_specdevs();
 phase=0;
 proceed=true;
 while (proceed==true) {
@@ -341,7 +342,10 @@ while (proceed==true) {
         }
       break;
     case 6      :       //closing descriptor
-      (void) close(mnt_inf);
+      if (mnt_inf>=0) {
+        (void) close(mnt_inf);
+        mnt_inf=-1;
+        }
       break;
     TOOBAD      :
     default     :       //SAFE Guard

@@ -798,6 +798,7 @@ int phase;
 _Bool proceed;
 
 status=0;
+mfd=-1;
 contpath=sys_get_cont_path(cont->contname);
 (void) snprintf(rootfs,sizeof(rootfs),"%s/%s",contpath,"rootfs");
 (void) log_alert(1,"%s ---------------------------------------------",CONT);

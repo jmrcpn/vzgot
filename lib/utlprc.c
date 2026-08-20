@@ -77,8 +77,9 @@ switch (sig) {
     tics++;
     break;
   default        :
-    (void) fprintf(stderr,"%s Unexpected signal <%s> received\n",
-			  OPEP,strsignal(sig));
+    (void) fprintf(stderr,"%s Unexpected signal <%s> received "
+		    	  "(%lu SIGALRM received so far)\n",
+			  OPEP,strsignal(sig),tics);
     (void) fflush(stderr);
     break;
   }
