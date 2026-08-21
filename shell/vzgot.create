@@ -75,6 +75,38 @@ echo "$1"
 rm -f $LOCKFILE
 exit 1;
 }
+#===================================================================
+
+get_dns_servers()
+
+{
+local dns=""
+
+# 1. extracting real DNS from /etc/resolv
+if [ -f /etc/resolv.conf ]; then
+  dns=$(awk '/^nameserver/ {print $2}' /etc/resolv.conf | 	\
+		grep -vE '^(127\.|::1)'			|	\
+	       	tr '\n' ' ' 				|	\
+	       	xargs)
+  fi
+
+#If there is no DNS then trying to extract them via nmcli
+if [ -z "$dns" ] && command -v nmcli >/dev/null 2>&1; then
+  dns=$(nmcli -g IP4.DNS dev show 2>/dev/null		|	\
+	  	grep -vE '^(127\.|::1)'			|	\
+		grep -v '^$'				|	\
+	       	tr '\n' ' '				|	\
+		xargs)
+  fi
+
+#we found nothing lets hard code DNS Server
+# 3. Fallback ultime si aucun DNS amont valide n'a été trouvé
+if [ -z "$dns" ]; then
+ dns="8.8.8.8 1.1.1.1"
+ fi
+
+echo "$dns"
+}
 
 #===================================================================
 #main process
@@ -91,6 +123,7 @@ read -r NODE TEMPLATE DISTRIB CPUARCH <<< $(echo $ENTRY)
 if [ -z "$NODE" ] ; then
   abort "Unable to find \"$CONTNAME\" definition within  /etc/vzgot/vzgot_list"
 else
+  export HOST_DNS=$(get_dns_servers)
 #setting distribution
   case "$DISTRIB" in
     "alpine"	)

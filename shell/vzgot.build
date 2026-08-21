@@ -122,6 +122,7 @@ rsync -a 		\
 	console		\
 	full		\
 	fuse		\
+	loop-control	\
 	mem		\
 	null		\
 	ptmx		\
@@ -132,9 +133,16 @@ rsync -a 		\
 	tty		\
 	urandom		\
 	zero		\
-	loop[0-7]	\
 	${DEVREF}
 )
+
+#To preset some loop device within container
+for i in $(seq 0 7);
+  do
+  if [ ! -e "${DEVREF}/loop${i}" ]; then
+    mknod -m 660 "${DEVREF}/loop${i}" b 7 ${i}
+  fi
+  done
 
 mkdir -m 755 ${DEVREF}/pts
 

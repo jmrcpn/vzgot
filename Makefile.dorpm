@@ -12,28 +12,28 @@ dovzgot	:  dorpm
 	   @echo ""
 	   @echo " To install vzgot, choose the package matching your init system:"
 	   @echo ""
-	   @echo " 1) systemd-based system (Fedora, RHEL, Rocky, openSUSE):"
-	   @echo "    sudo dnf install                         			\\"
-	   @echo "    $(RPMDIR)/RPMS/noarch/vzgot-systemd-$(VERSION)*.rpm	\\"
-	   @echo "    $(RPMDIR)/RPMS/$$(uname -m)/vzgot-$(VERSION)-*.rpm"
+	   @echo " 1) systemd-based systems (Fedora, RHEL, Rocky, openSUSE):"
+	   @echo -e "sudo dnf install						\\"
+	   @echo -e "  $(RPMDIR)/RPMS/noarch/vzgot-systemd-$(VERSION)*.rpm \\"
+	   @echo -e "  $(RPMDIR)/RPMS/$$(uname -m)/vzgot-$(VERSION)-*.rpm"
 	   @echo ""
 	   @echo " 2) SysVinit-based system (Osukiss, etc.):"
-	   @echo "    sudo zypper install $(RPMDIR)/RPMS/noarch/vzgot-sysv-*.rpm"
-	   @echo "    (or: sudo rpm -Uvh $(RPMDIR)/RPMS/noarch/vzgot-sysv-*.rpm)"
+	   @echo "    sudo zypper install					\\"
+	   @echo "    $(RPMDIR)/RPMS/noarch/vzgot-sysv-$(VERSION)*.rpm		\\"
+	   @echo "    $(RPMDIR)/RPMS/$$(uname -m)/vzgot-$(VERSION)-*.rpm"
 	   @echo ""
 	   @echo " Note: Using 'dnf' (or zypper) is recommended to automatically"
 	   @echo "       resolve missing dependencies."
 	   @echo "======================================================================"
 
 dorpm	:  srcrpm
-	   @ echo "Making RPM binary"
-	   # echo $(RPMDIR)
+	   @ echo "Building RPM"
 	   @ rpmbuild						\
 		--quiet						\
 		--define "_topdir $(RPMDIR)"			\
 		--rebuild					\
 		$(RPMDIR)/SRPMS/$(APPNAME)-$(VERSION)*.src.rpm
-	   @ echo "RPM binary completed"
+	   @ echo "Build completed"
 
 srcrpm	:  spec vztar
 	   @ echo "Making RPM src"

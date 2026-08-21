@@ -6,6 +6,7 @@ Requires=bird.service
 [Service]
 Type=oneshot
 RemainAfterExit=yes
+SELinuxContext=system_u:system_r:unconfined_service_t:s0
 ExecStart=/usr/bin/bash /var/lib/vzgot/systemd/vzgot.init start
 ExecStop=/usr/bin/bash /var/lib/vzgot/systemd/vzgot.init stop
 ExecReload=/usr/bin/bash /var/lib/vzgot/systemd/vzgot.init reload

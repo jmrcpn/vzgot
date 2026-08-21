@@ -66,16 +66,15 @@ HOSTNAME="${VZROOT}/etc/hostname"
 echo "${CONTNAME}.${DOMAIN}"
 ) > ${HOSTNAME}
 
-#setting the DNS resolver using the Host resolv.conf
-if [ -f /etc/resolv.conf ] ; then
-  rm -f ${VZROOT}/etc/resolv.conf
-  cp -a /etc/resolv.conf ${VZROOT}/etc/resolv.conf
-  fi
-
 #----------------------------------------------------
 #set network in manual mode
 NDIR=${VZROOT}/etc/systemd/network/
 INTER=${NDIR}/80-container-eth0.network
+
+#HOST_DNS set within vzgot.create
+if [ -z "${HOST_DNS}" ] ; then
+  HOST_DNS="1.1.1.1 8.8.8.8"
+  fi
 
 if [ -n ${LSTIP} ] ; then
   ETH0=`echo ${LSTIP} | tr ',' ' ' | cut -d' ' -f1`
@@ -89,6 +88,7 @@ if [ -n ${LSTIP} ] ; then
   echo ""
   echo "[Network]"
   echo "Address=${ETH0}/32"
+  echo "DNS=${HOST_DNS}"
   echo ""
   echo "[Route]"
   echo "Destination=192.0.2.1/32"

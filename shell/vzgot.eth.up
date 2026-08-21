@@ -51,8 +51,9 @@ if [ $ret -ne 0 ]; then
   fi
 #giving the "from" part of the pair to VZ
 /usr/sbin/ip link set eth0 netns $VEPID
+ret=$?
 if [ $ret -ne 0 ]; then
-  echo "$0, unable to give F_${CONTNAME} veth pair to container process"
+  echo "$0, unable to give v-${CONTNAME} veth pair to container process"
   exit $ret
   fi
 #======================================================================
