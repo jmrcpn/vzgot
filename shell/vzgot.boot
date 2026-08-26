@@ -99,6 +99,9 @@ case "${DISTRIB}" in
   "debian"	)
     FLINUX="Debian"	#Debian family distribution
     ;;
+  "devuan"	)
+    FLINUX="Devuan"	#Devuan family distribution
+    ;;
   "fedora"	)
     FLINUX="Fedora"	#Fedora family distribution
     ;;

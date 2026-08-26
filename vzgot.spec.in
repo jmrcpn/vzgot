@@ -70,6 +70,7 @@ long their kernel is a Linux one
 %{_prefix}/libexec/%{name}/shell/%{name}.boot
 %{_prefix}/libexec/%{name}/shell/%{name}.boot.Alpine
 %{_prefix}/libexec/%{name}/shell/%{name}.boot.Debian
+%{_prefix}/libexec/%{name}/shell/%{name}.boot.Devuan
 %{_prefix}/libexec/%{name}/shell/%{name}.boot.Fedora
 %{_prefix}/libexec/%{name}/shell/%{name}.boot.Gentoo
 %{_prefix}/libexec/%{name}/shell/%{name}.boot.Opensuse
@@ -80,6 +81,7 @@ long their kernel is a Linux one
 %{_prefix}/libexec/%{name}/shell/%{name}.create
 %{_prefix}/libexec/%{name}/shell/%{name}.create.Alpine
 %{_prefix}/libexec/%{name}/shell/%{name}.create.Debian
+%{_prefix}/libexec/%{name}/shell/%{name}.create.Devuan
 %{_prefix}/libexec/%{name}/shell/%{name}.create.Fedora
 %{_prefix}/libexec/%{name}/shell/%{name}.create.Gentoo
 %{_prefix}/libexec/%{name}/shell/%{name}.create.Opensuse

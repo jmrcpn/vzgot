@@ -1,0 +1,130 @@
+#! /usr/bin/bash
+#----------------------------------------------------
+#shell used to prepare container rootfs according
+#distribution type
+#
+#----------------------------------------------------
+#Syntaxe
+#vzgot.fistboot cont_name domain ip_list [Base]
+#	cont_name is the container name
+#	Domain is the container domainname 
+#	IP_LIST is an ip list (ip,ip1,ip2,..) used
+#		to prepare container network
+#----------------------------------------------------
+CONTNAME=$1
+DOMAIN=$2
+LSTIP=$3
+#----------------------------------------------------
+#extracting configuration
+CONFDIR=/etc/vzgot
+if ! [ -f ${CONFDIR}/vzgot_config ] ; then
+  echo "Missing vzgot config file"
+  exit 1	#trouble trouble
+  fi
+
+. ${CONFDIR}/vzgot_config
+
+. ${CONFDIR}/names/${CONTNAME}
+
+if [ -z "${HOMEFS}" ] ; then 
+  echo "Missing ${CONTNAME} HOMEFS variable"
+  exit 1	#trouble trouble
+  fi
+
+CONTDIR=${HOMEFS}
+#specific container configuration override (if needed)
+if [ -f ${CONTDIR}/vzgot_config ] ; then
+  ${CONTDIR}/vzgot_config
+  fi
+#----------------------------------------------------
+VZROOT=${CONTDIR}/rootfs
+#====================================================
+#procedure to implement Alpine distribution file
+#----------------------------------------------------
+#Preparing  container /etc/hosts file
+#----------------------------------------------------
+
+HOSTS="${VZROOT}/etc/hosts"
+(
+echo "#----------------------------------------------------"
+echo "#done by vzgot.fboot"
+echo "#----------------------------------------------------"
+echo -e "127.0.0.1\tlocalhost.localdomain\tlocalhost"
+) > $HOSTS
+
+if [ -n $LSTIP ] ; then
+  (
+  echo -n `echo $LSTIP | tr ',' ' ' | cut -d' ' -f1`
+  echo -e "\t${CONTNAME}.$DOMAIN\t\t${CONTNAME}"
+  echo "#----------------------------------------------------"
+  ) >> $HOSTS
+  fi
+#----------------------------------------------------
+HOSTNAME="${VZROOT}/etc/hostname"
+(
+echo "${CONTNAME}.$DOMAIN"
+) > $HOSTNAME
+
+#----------------------------------------------------
+#set network in manual mode
+INTER=${VZROOT}/etc/network/interfaces
+cat <<EOF > ${INTER}
+auto lo
+iface lo inet loopback
+
+EOF
+
+if [ -n $LSTIP ] ; then
+  ETH0=`echo $LSTIP | tr ',' ' ' | cut -d' ' -f1`
+  (
+  echo ""
+  echo "#----------------------------------------------------"
+  echo "# vzgot Network Initialization"
+  echo "#----------------------------------------------------"
+  echo "auto eth0"
+  echo "	iface eth0 inet static"
+  echo "	address $ETH0"
+  echo "	netmask 255.255.255.255"
+  echo "	pre-up iptables-restore < /etc/iptables/rules.v4"
+  echo "	up ip route add 192.0.2.0/24 dev eth0 scope link"
+  echo "	up ip route add default via 192.0.2.1 dev eth0"
+  ) >> ${INTER}
+  fi
+
+#====================================================
+#adding default iptables
+mkdir -p ${VZROOT}/etc/iptables
+cp -a ${VZ_DATA_LIB}/etc/sysconfig/iptables	\
+      ${VZROOT}/etc/iptables/rules.v4
+
+#====================================================
+#Prepare /dev directoy contents
+DEV="${VZROOT}/dev"
+#MOTHING specific to be added to container /dev
+
+#----------------------------------------------------
+FSTAB="${VZROOT}/etc/fstab"
+(
+echo -e "/$CONTNAME\t\t/\t\t\text4\tdefaults\t\t0 0"
+echo -e "proc\t\t/proc\t\t\tproc\tdefaults\t\t0 0"
+echo -e "sysfs\t\t/sys\t\t\tsysfs\tdefaults\t\t0 0"
+echo -e "devpts\t\t/dev/pts\t\tdevpts\trw,noexec,nosuid,mode=0620\t0 0"
+echo -e "tmpfs\t\t/run\t\ttmpfs\tdefaults\t\t0 0"
+) > $FSTAB
+
+#to get mounted partition data
+ln -snf /proc/mounts ${VZROOT}/etc/mtab
+
+#setting the DNS resolver
+if [ -f /etc/resolv.conf ] ; then
+  cp -a /etc/resolv.conf ${VZROOT}/etc
+  fi
+
+#Stop DHCP
+if [ -f "${VZROOT}/etc/init.d/dhcpcd" ]; then
+  rm -f "${VZROOT}/etc/runlevels/default/dhcpcd"
+  fi
+
+
+#====================================================
+exit 0

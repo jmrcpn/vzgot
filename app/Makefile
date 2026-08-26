@@ -10,6 +10,7 @@ debug	:
 prod	:
 	  @ $(MAKE)						\
 		OPTIME="-ggdb3 -D_FORTIFY_SOURCE=2 -O2"		\
+		VZMON="-static"					\
 		exe
 	  @ strip $(EXE) $(STA)
 
@@ -48,7 +49,7 @@ $(EXE)	:  $(OBJS) $(VZLIB)
 	   @ $(LD) $(LDFLAGS) -o $@ $@.o $(LIBS)
 
 $(STA)	:  $(OBJS) $(VZLIB)
-	   $(LD) $(LDFLAGS) -pie -o $@ $@.o $(LIBS)
+	   $(LD) $(VZMON) $(LDFLAGS) -pie -o $@ $@.o $(LIBS)
 
 #--------------------------------------------------------------------
 vzmon.o	:							\
