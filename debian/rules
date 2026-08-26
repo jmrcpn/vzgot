@@ -4,17 +4,21 @@
 	dh $@
 
 override_dh_auto_build:
-	# Génération du fichier de date comme dans le .spec
+	# Generate build timestamp file
 	date > vzgot.build_date
-	# Appel de la compilation avec la cible 'prod'
+	# Trigger build using 'prod' target
 	dh_auto_build -- prod
 
+override_dh_dwz:
+	# Skip dwz optimization (binaries stripped upstream)
+
 override_dh_auto_install:
-	# Création forcée des dossiers vides requis par le .spec
+	# Create empty required directories
 	mkdir -p debian/tmp/etc/vzgot/sites_data
 	mkdir -p debian/tmp/etc/vzgot/names
 	mkdir -p debian/tmp/vzgot
-	# Installation globale dans le répertoire temporaire de debhelper
-	dh_auto_install -- DESTDIR=debian/tmp				\
-	       		   INITDIR=/etc/init.d				\
-			   SYSTEMD=/lib/systemd
+	# Global installation into debhelper staging directory
+	dh_auto_install -- DESTDIR=debian/tmp		\
+	                   INITDIR=/etc/init.d		\
+	                   SYSTEMD=/lib/systemd
+

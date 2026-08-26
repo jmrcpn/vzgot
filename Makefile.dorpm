@@ -69,24 +69,6 @@ spec	:  $(APPNAME).spec.in
 	     -e 's/@@PACKAGER@@/$(PACKAGER)/g'			\
 	     -e 's/@@CHANGELOG@@/$(CHANGELOG)/g'		\
 	     < $< > $@
-	   @ sed						\
-             -e 's/@@DIST@@/$(DIST)/g' 				\
-	     -e 's/@@APPN@@/$(APPNAME)/g'			\
-	     -e 's/@@VERSION@@/$(VERSION)/g'			\
-	     -e 's/@@RELEASE@@/$(RELEASE)/g'			\
-	     -e 's/@@PACKAGER@@/$(PACKAGER)/g'			\
-	     -e 's/@@CHANGELOG@@/$(CHANGELOG)/g'		\
-	     -e 's/@@DATE@@/$(DEB_DATE)/g'			\
-	     < debian/changelog.in > debian/changelog
-	   @ sed						\
-             -e 's/@@DIST@@/$(DIST)/g' 				\
-	     -e 's/@@APPN@@/$(APPNAME)/g'			\
-	     -e 's/@@VERSION@@/$(VERSION)/g'			\
-	     -e 's/@@RELEASE@@/$(RELEASE)/g'			\
-	     -e 's/@@PACKAGER@@/$(PACKAGER)/g'			\
-	     -e 's/@@CHANGELOG@@/$(CHANGELOG)/g'		\
-	     -e 's/@@DATE@@/$(DEB_DATE)/g'			\
-	     < debian/control.in > debian/control
 
 #--------------------------------------------------------------------
 vztar	:  doapl
