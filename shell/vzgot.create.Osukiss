@@ -139,11 +139,11 @@ if [ -f /etc/resolv.conf ] ; then
   fi
 
 #====================================================
-#adding repo if necessary
-if [ -f ${CONFDIR}/repos/cont.repo ] ; then
-  cp -a						\
-	${CONFDIR}/repos/cont.repo		\
-	${VZROOT}/etc/zypp/repos.d/
+#adding default iptables
+if [ -f ${VZ_DATA_LIB}/etc/sysconfig/iptables ] ; then
+  cp -a ${VZ_DATA_LIB}/etc/sysconfig/iptables	\
+	${VZROOT}/etc/sysconfig/iptables
+  /sbin/chroot ${VZROOT} chkconfig --add iptables
   fi
 
 #====================================================
