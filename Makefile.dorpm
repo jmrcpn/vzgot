@@ -57,7 +57,7 @@ cleanbld:
 DEB_DATE=$(shell date -R)
 PACKAGER?= To be defined
 DIST	?= .dvl
-RPM_DATE = $(shell date "+%a %b %d %Y")
+RPM_DATE = $(shell unset LANG; date "+%a %b %d %Y")
 CHANGELOG= * $(RPM_DATE) $(PACKAGER) - $(VERSION)-$(RELEASE)\n- Automatic build from Makefile.
 
 spec	:  $(APPNAME).spec.in

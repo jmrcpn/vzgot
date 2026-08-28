@@ -1,6 +1,6 @@
-#maintainer:	<To be defined>
+#maintainer:	<Jean-Marc Pigeon <jmp@safe.ca>>
 pkgname=vzgot
-pkgver=26.08.5
+pkgver=26.08.7
 pkgrel=0
 pkgdesc="Lightweight C-based container manager supervisor"
 url="https://github.com/jmrcpn/vzgot"
@@ -10,7 +10,7 @@ makedepends="linux-headers libcap-dev"
 options="!check"
 
 # Déclaration des sous-paquets générés
-subpackages="$pkgname-sysv $pkgname-systemd"
+subpackages="$pkgname-openrc $pkgname-sysv $pkgname-systemd"
 
 source="$pkgname-$pkgver.tar.gz"
 builddir="$srcdir/$pkgname-$pkgver"
@@ -21,6 +21,8 @@ build() {
 
 package() {
     make DESTDIR="$pkgdir" install
+    # Installation du script OpenRC
+    install -m755 -D "$builddir"/alpine/init.d/vzgot "$pkgdir"/etc/init.d/vzgot
 }
 
 # Sous-paquet SysV / Init
@@ -40,4 +42,11 @@ systemd() {
     # Déplace le répertoire systemd dans le sous-paquet vzgot-systemd
     amove usr/lib/systemd
 }
-"
+
+openrc() {
+    pkgdesc="OpenRC init script for vzgot"
+    install_if="$pkgname=$pkgver-r$pkgrel openrc"
+
+    amove etc/init.d
+}
+
