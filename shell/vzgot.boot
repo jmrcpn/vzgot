@@ -111,6 +111,9 @@ case "${DISTRIB}" in
   "ok-1"	)
     FLINUX="Osukiss"	#Osukiss family distribution
     ;;
+  "opensuse"	)
+    FLINUX="Opensuse"	#opensuse distribution
+    ;;
   "ubuntu"	)
      FLINUX="Ubuntu"	#Ubuntu family distribution
     ;;

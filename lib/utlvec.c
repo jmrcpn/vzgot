@@ -80,7 +80,7 @@ register int done;
 
 done=0;
 if (*vptr!=(VPTR *)0) {
-  register u_int i;
+  register uint32_t i;
   register VECLST *cur;
 
   for (i=0,cur=(*vptr)->vcl;i<(*vptr)->numvec;i++) {
@@ -117,7 +117,7 @@ VPTR *vec_freeveclst(VPTR *vptr,void *(*freepayload)(void *))
 
 {
 if (vptr!=(VPTR *)0) {
-  register u_int i;
+  register uint32_t i;
   register VECLST *cur;
 
   for (i=0,cur=vptr->vcl->prv;i<vptr->numvec;i++) {

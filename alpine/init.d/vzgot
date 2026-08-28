@@ -1,0 +1,163 @@
+#!/sbin/openrc-run
+
+description="Startup and shutdown ONBOOT vzgot containers"
+
+extra_started_commands="reload"
+
+depend() {
+    need net
+    after firewall
+    use logger
+}
+
+WEIGHT=10000
+CGROUP="/sys/fs/cgroup"
+VZGROUP="${CGROUP}/vzgot"
+CONFDIR="/etc/vzgot"
+
+# Chargement de la configuration globale
+if [ -f "$CONFDIR/vzgot_config" ]; then
+    . "$CONFDIR/vzgot_config"
+fi
+
+start() {
+    ebegin "Starting vzgot containers"
+
+    # Préparation système et cgroups v2
+    sysctl --system -q >/dev/null 2>&1
+    modprobe fuse >/dev/null 2>&1
+
+    if [ -f "${CGROUP}/cgroup.controllers" ]; then
+        echo "+cpu +cpuset +memory +pids" > "${CGROUP}/cgroup.subtree_control" 2>/dev/null || true
+    fi
+
+    mkdir -p "${VZGROUP}"
+    if [ -f "${VZGROUP}/cpu.weight" ]; then
+        echo "${WEIGHT}" > "${VZGROUP}/cpu.weight"
+    fi
+    if [ -f "${VZGROUP}/cgroup.controllers" ]; then
+        echo "+cpu +cpuset +memory +pids" > "${VZGROUP}/cgroup.subtree_control" 2>/dev/null || true
+    fi
+
+    # Balayage des conteneurs à démarrer
+    count=0
+    if [ -d "$CONFDIR/names" ]; then
+        for cont_file in "$CONFDIR/names/"*; do
+            [ -e "$cont_file" ] || continue
+            cont="${cont_file##*/}"
+
+            ONBOOT=""
+            HOMEFS=""
+            . "$cont_file"
+
+            onboot=$(echo "$ONBOOT" | tr '[:upper:]' '[:lower:]')
+            [ "$onboot" = "yes" ] || continue
+
+            CONTDIR="${VZDIR:-/var/lib/vzgot}/$cont"
+            [ -n "$HOMEFS" ] && CONTDIR="$HOMEFS"
+
+            CONTPID=""
+            if [ -f "$CONTDIR/first.pid" ]; then
+                CONTPID=$(cat "$CONTDIR/first.pid")
+            fi
+            if [ -n "$CONTPID" ] && [ -e "/proc/$CONTPID" ]; then
+                continue
+            fi
+
+            delay=$((count * 3 + 10))
+            (
+                sleep "$delay"
+                BOOTLOG="$CONTDIR/bootlog"
+                vzgot boot "$cont" > "$BOOTLOG" 2>&1
+                date >> "$BOOTLOG"
+            ) &
+
+            count=$((count + 1))
+        done
+    fi
+
+    einfo "vzgot: ${count} container(s) scheduled on starting block"
+    eend 0
+}
+
+stop() {
+    ebegin "Stopping all vzgot containers"
+
+    MAXT=30
+    count=0
+
+    if [ ! -d "$CONFDIR/names" ]; then
+        eend 0
+        return 0
+    fi
+
+    tostop=$(ls "$CONFDIR/names" | sort -r)
+
+    # Envoi du signal d'arrêt
+    for cont in $tostop; do
+        cont_file="$CONFDIR/names/$cont"
+        [ -f "$cont_file" ] || continue
+
+        HOMEFS=""
+        . "$cont_file"
+
+        CONTDIR="${VZDIR:-/var/lib/vzgot}/$cont"
+        [ -n "$HOMEFS" ] && CONTDIR="$HOMEFS"
+
+        CONTPID=""
+        if [ -f "$CONTDIR/first.pid" ]; then
+            CONTPID=$(cat "$CONTDIR/first.pid")
+        fi
+
+        if [ -n "$CONTPID" ] && [ -e "/proc/$CONTPID" ]; then
+            sleep 0.2
+            vzgot shutdown "$cont" &
+            count=$((count + 1))
+        fi
+    done
+
+    # Boule d'attente d'extinction (max 30s)
+    t=1
+    remain=0
+    while [ "$t" -lt "$MAXT" ]; do
+        remain=0
+        for cont in $tostop; do
+            cont_file="$CONFDIR/names/$cont"
+            [ -f "$cont_file" ] || continue
+
+            HOMEFS=""
+            . "$cont_file"
+
+            CONTDIR="${VZDIR:-/var/lib/vzgot}/$cont"
+            [ -n "$HOMEFS" ] && CONTDIR="$HOMEFS"
+
+            CONTPID=""
+            if [ -f "$CONTDIR/first.pid" ]; then
+                CONTPID=$(cat "$CONTDIR/first.pid")
+            fi
+
+            if [ -n "$CONTPID" ] && [ -e "/proc/$CONTPID" ]; then
+                remain=$((remain + 1))
+            fi
+        done
+
+        if [ "$remain" -eq 0 ]; then
+            break
+        fi
+
+        einfo "Waiting for containers shutdown, remaining: ${remain}/${count}..."
+        sleep 3
+        t=$((t + 1))
+    done
+
+    if [ "$remain" -eq 0 ]; then
+        eend 0 "vzgot: all containers down"
+    else
+        eend 1 "vzgot: ${remain} container(s) still up after ${MAXT}s"
+    fi
+}
+
+reload() {
+    ebegin "Reloading vzgot configuration"
+    eend 0 "Nothing to do"
+}

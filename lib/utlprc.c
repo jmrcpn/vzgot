@@ -70,7 +70,7 @@ static void trppace(int sig)
 {
 #define	OPEP	"subprc.c:trppace,"
 
-static u_long tics=(u_long)0;
+static unsigned long tics=0UL;
 
 switch (sig) {
   case SIGALRM   :
@@ -230,7 +230,7 @@ if (live==false) {
 /*	within the application.			*/
 /*						*/
 /************************************************/
-void prc_pace(u_long millisec,int onoff)
+void prc_pace(unsigned long millisec,int onoff)
 
 {
 int static done=false;

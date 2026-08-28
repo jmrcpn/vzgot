@@ -50,7 +50,7 @@
 typedef	void *INFPTR;
 
 typedef	struct	{
-	u_int nbr;	/*nbr process in queue	*/
+	uint32_t nbr;	/*nbr process in queue	*/
 	pid_t *pqueue;	/*process queue		*/
 	}PRCTYP;
 
@@ -85,6 +85,6 @@ extern _Bool prc_host_loadavg(double *avg60,double *avg300,double *avg900);
 extern _Bool prc_get_last_pid(const char *contname,uint32_t *last_pid);
 
 //procedute to get the number of users related to a container PID
-extern _Bool prc_upd_users(pid_t contpid,u_int *nbrusr);
+extern _Bool prc_upd_users(pid_t contpid,uint32_t *nbrusr);
 
 #endif

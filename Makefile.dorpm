@@ -95,7 +95,7 @@ doapl	:
 	   @ #adding application sources
 	   @ cp -a apparmor/* $(APLR)/apparmor/
 	   @ cp -a app/*.c $(APLR)/app/
-	   @ cp -a lib/{*.c,*.h} $(APLR)/lib/
+	   @ cp -a lib/*.[ch] $(APLR)/lib/
 	   @ cp -a utilities/*.c $(APLR)/utilities/
 	   @ cp -a shell/vzgot* $(APLR)/shell
 	   @ cp -a shell/vzctl.* $(APLR)/shell
@@ -104,8 +104,10 @@ doapl	:
 	   @ cp -a contrib/* $(APLR)/contrib
 	   @ cp -a distributions/* $(APLR)/distributions
 	   @ cp -a vztemplates $(APLR)/
-	   @ #adding debian packageing information
+	   @ #adding debian packaging information
 	   @ cp -a debian $(APLR)/
+	   @ #adding alpine packaging information
+	   @ cp -a alpine $(APLR)/
 	   @ #adding configuration file
 	   @ cp -a						\
 	   	conf/online.tpl					\
@@ -117,10 +119,15 @@ doapl	:
 		README*						\
 		QUICK-START					\
 	   	$(APLR)
-	   @ cp -a etc/{users,groups,sudoers} $(APLR)/etc/
-	   @ cp -a etc/{resolv.conf,shadow} $(APLR)/etc/
-	   @ cp -a etc/sysconfig $(APLR)/etc/
-	   @ cp -a etc/snmp $(APLR)/etc/
+	   @ cp -a 						\
+		   etc/users					\
+		   etc/groups					\
+		   etc/sudoers					\
+		   etc/resolv.conf				\
+		   etc/shadow					\
+		   etc/sysconfig				\
+		   etc/snmp					\
+		   $(APLR)/etc/
 	   @ #adding construction file
 	   @ cp -a 						\
 		Makefile					\

@@ -19,6 +19,7 @@
 #include	<errno.h>
 #include	<fcntl.h>
 #include	<limits.h>
+#include	<inttypes.h>
 #include	<malloc.h>
 #include	<signal.h>
 #include	<sched.h>
@@ -149,40 +150,48 @@ if (temps!=(char *)0)
 */
 /********************************************************/
 /*                                                      */
-/*	Procedure to dump the current process memory	*/
-/*	state via syslog. This routine is activated	*/
-/*	under SIGPWR signal reception.			*/
+/*    Procedure to dump the current process memory      */
+/*    state via syslog. This routine is activated       */
+/*    under SIGPWR signal reception.                    */
 /*                                                      */
 /********************************************************/
-PUBLIC void apl_mem_report(void) 
+PUBLIC void apl_mem_report(void)
 
 {
-struct mallinfo2 mi;
 FILE *fichier;
 
-//Recovering memory statistique
-mi=mallinfo2();
-(void) log_alert(0,"--- MEMORY REPORT (SIGPWR) ---");
-// Mémoire totale allouée via sbrk (Heap classique)
-(void) log_alert(0,"Heap main arena   : %zu bytes",mi.arena);
-// Nombre de "chunks" libres
-(void) log_alert(0,"Free chunks       : %zu",mi.ordblks);
-// Mémoire allouée via mmap (souvent les gros blocs ou librairies)
-(void) log_alert(0,"Mmap regions      : %zu (%zu bytes)",mi.hblks,mi.hblkhd);
-// Total de la mémoire activement utilisée par l'application
-(void) log_alert(0,"Total allocated   : %zu bytes",mi.uordblks);
-// Total de la mémoire libre dans les arènes
-(void) log_alert(0,"Total free        : %zu bytes",mi.fordblks);
-// Le "Keepcost" : quantité de mémoire libérable par malloc_trim()
-(void) log_alert(0,"Releasable (trim) : %zu bytes", mi.keepcost);
-if ((fichier=fopen("/proc/self/statm","r"))!=(FILE *)0) {
-  uint64_t pages;
+(void) log_alert(0, "--- MEMORY REPORT (SIGPWR) ---");
 
-  if (fscanf(fichier,"%*d %ju",&pages)==1)  // On saute le 1er, on lit le 2e
-    (void) log_alert(0,"Kernel RSS : %ld bytes",pages*sysconf(_SC_PAGESIZE)); 
+/* Read kernel memory metrics (portable glibc & musl) */
+if ((fichier = fopen("/proc/self/status", "r")) != (FILE *)0) {
+  char ligne[128];
+
+  while (fgets(ligne, sizeof(ligne), fichier) != NULL) {
+    /* Filter key memory indicators */
+    if (strncmp(ligne, "VmSize:", 7) == 0 ||  /* Total virtual memory size */
+        strncmp(ligne, "VmPeak:", 7) == 0 ||  /* Peak virtual memory size */
+        strncmp(ligne, "VmRSS:",  6) == 0 ||  /* Physical RAM currently in use */
+        strncmp(ligne, "VmHWM:",  6) == 0 ||  /* Peak physical RAM (High Water Mark) */
+        strncmp(ligne, "VmData:", 7) == 0 ||  /* Heap / Data segment size */
+        strncmp(ligne, "VmStk:",  6) == 0) {  /* Stack size */
+      ligne[strcspn(ligne, "\r\n")] = '\0'; /* Strip newline character */
+      (void) log_alert(0, "%s", ligne);
+      }
+    }
   (void) fclose(fichier);
   }
-(void) log_alert(0,"------------------------------");
+
+/* Calculate explicit RSS size via page count */
+if ((fichier = fopen("/proc/self/statm", "r")) != (FILE *)0) {
+  uint64_t pages;
+
+  if (fscanf(fichier,"%*d %"SCNu64,&pages) == 1) {
+    uint64_t page_size = (uint64_t)sysconf(_SC_PAGESIZE);
+    (void) log_alert(0, "Kernel RSS Bytes  : %" PRIu64 " bytes", pages * page_size);
+    }
+  (void) fclose(fichier);
+  }
+(void) log_alert(0, "------------------------------");
 }
 /*
 

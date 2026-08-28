@@ -1686,11 +1686,11 @@ if (live==false) {	//are we in foreground (live) mode?
 	  }
 	break;
       case 4	:	/*setting new std	*/
-	if ((stdout=fdopen(1,"w"))==(FILE *)0) {
+	if (freopen((const char *)0,"w",stdout) == NULL) {
 	  (void) log_alert(0,"%s, Unable to fdopen stdout (error=<%s>)",
 			      OPEP,strerror(errno));
 	  }
-	if ((stderr=fdopen(2,"w"))==(FILE *)0) {
+	if (freopen((const char *)0,"w",stderr) == NULL) {
 	  (void) log_alert(0,"%s, Unable to fdopen stderr (error=<%s>)",
 			      OPEP,strerror(errno));
 	  }

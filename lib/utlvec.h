@@ -31,6 +31,7 @@
 #ifndef UTLVEC
 #define UTLVEC
 #include	<stdlib.h>
+#include	<stdint.h>
 
 #define	VECFREE	(void *(*)(void *))free
 
@@ -45,7 +46,7 @@ typedef struct LIST {
 	}VECTOR;
 
 typedef	struct		{
-	u_int numvec;	/*number of vector	*/
+	uint32_t numvec;/*number of vector	*/
 	VECLST *vcl;	/*vector list		*/
 	}VPTR;
 
