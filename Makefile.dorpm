@@ -203,11 +203,14 @@ install	:
 	   @ install -vD						\
 	   	sysv/ok_init.sh $(DESTDIR)/$(INITDIR)/$(APPNAME)
 	   @ install -vDm0640						\
-		systemd/vzgot.service -t $(DESTDIR)$(SYSTEMD)/system/
-	   @ install -vDm0640						\
+		systemd/vzgot.service -t $(DESTDIR)/$(SYSTEMD)/system/
+	   @ install -vDm0600						\
 		systemd/vz-br0.nmconnection				\
 		-t $(DESTDIR)/etc/NetworkManager/system-connections/
 	   @ install -vDm0640 sysv/ifconfig.vz-br0 -t $(DESTDIR)/etc/sysconfig
+	   @ install -vDm0755						\
+		alpine/init.d/vzgot					\
+		-t $(DESTDIR)/etc/init.d/
 
 #--------------------------------------------------------------------
 RPMDIR	=	$(CURDIR)/rpmbuild

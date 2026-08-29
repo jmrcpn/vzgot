@@ -191,6 +191,38 @@ if [ "$1" = 0 ]; then
   fi
 
 #=============================================================================
+%package		openrc
+Summary		:       OpenRC init script for %{name}
+
+#-----------------------------------------------------------------------------
+Requires        :       %{name} = %{version}-%{release}
+
+BuildArch	:	noarch
+
+#-----------------------------------------------------------------------------
+%description            openrc
+This package allow to use vzgot on openrc init system.
+
+#-----------------------------------------------------------------------------
+%files                  openrc
+%defattr(-, root,root,-)
+%{_sysconfdir}/init.d/%{name}
+
+#-----------------------------------------------------------------------------
+%post			openrc
+if [ "$1" = 1 ]; then
+  command -v rc-update >/dev/null 2>&1 &&
+  rc-update add %{name} default || :
+  fi
+
+#after upgrade or remove
+%preun			openrc
+if [ "$1" = 0 ]; then
+  command -v rc-update >/dev/null 2>&1 &&
+  rc-update del %{name} default || :
+  fi
+
+#=============================================================================
 %package		systemd
 Summary		:       %{name} configuration file for systemd
 
