@@ -35,7 +35,7 @@ dorpm	:  srcrpm
 		$(RPMDIR)/SRPMS/$(APPNAME)-$(VERSION)*.src.rpm
 	   @ echo "Build completed"
 
-srcrpm	:  spec vztar
+srcrpm	:  vztar
 	   @ echo "Making RPM src"
 	   @ rm -fr 						\
 		$(RPMDIR)/SOURCES				\
@@ -46,8 +46,7 @@ srcrpm	:  spec vztar
 		--quiet						\
 		--define "_topdir $(RPMDIR)"			\
 		-bs						\
-		spec 
-	   @ rm -f spec
+		$(APPNAME).spec 
 	   @ echo "RPM src completed"
 
 cleanbld:
@@ -59,16 +58,6 @@ PACKAGER?= To be defined
 DIST	?= .dvl
 RPM_DATE = $(shell unset LANG; date "+%a %b %d %Y")
 CHANGELOG= * $(RPM_DATE) $(PACKAGER) - $(VERSION)-$(RELEASE)\n- Automatic build from Makefile.
-
-spec	:  $(APPNAME).spec.in
-	   @ sed						\
-             -e 's/@@DIST@@/$(DIST)/g' 				\
-	     -e 's/@@APPN@@/$(APPNAME)/g'			\
-	     -e 's/@@VERSION@@/$(VERSION)/g'			\
-	     -e 's/@@RELEASE@@/$(RELEASE)/g'			\
-	     -e 's/@@PACKAGER@@/$(PACKAGER)/g'			\
-	     -e 's/@@CHANGELOG@@/$(CHANGELOG)/g'		\
-	     < $< > $@
 
 #--------------------------------------------------------------------
 vztar	:  doapl
@@ -107,7 +96,11 @@ doapl	:
 	   @ #adding debian packaging information
 	   @ cp -a debian $(APLR)/
 	   @ #adding alpine packaging information
-	   @ cp -a alpine $(APLR)/
+	   @ mkdir -p $(APLR)/alpine/
+	   @ cp -a						\
+		 alpine/APKBUILD				\
+		 alpine/init.d					\
+		 $(APLR)/alpine/
 	   @ #adding configuration file
 	   @ cp -a						\
 	   	conf/online.tpl					\
@@ -134,7 +127,7 @@ doapl	:
 		Makefile.dorpm					\
 		Makefile.debian					\
 		Makefile.vers					\
-		$(APPNAME).spec.in				\
+		$(APPNAME).spec					\
 	      	$(APLR)/
 	   @ @ cp -a app/Makefile $(APLR)/app/
 	   @ @ cp -a lib/Makefile $(APLR)/lib

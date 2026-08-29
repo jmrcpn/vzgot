@@ -1,14 +1,14 @@
 #-----------------------------------------------------------------------------
-%{?!dist:	%define	dist	@@DIST@@}
+%{?!dist:	%define	dist	.dvl}
 %bcond_with	debug
 #-----------------------------------------------------------------------------
-Name		:	@@APPN@@
-Version		:	@@VERSION@@
-Release		:	@@RELEASE@@%{?dist}
+Name		:	vzgot
+Version		:	26.08.12
+Release		:	0%{?dist}
 Summary		:	An application to drive linux container
 Group		:	System Environment/Daemons
 
-Packager	:	@@PACKAGER@@
+Packager	:	Jean-Marc Pigeon <jmp@safe.ca>
 
 License		:	GPLv2+
 URL		:	https://github.com/jmrcpn/vzgot
@@ -323,6 +323,7 @@ date > %{name}-%{version}-%{release}.build_date
 
 #-----------------------------------------------------------------------------
 %changelog
-@@CHANGELOG@@
+* Sat Aug 29 2026 Jean-Marc Pigeon <jmp@safe.ca> - 26.08.12-0
+- Automatic build from Makefile.
 
 #-----------------------------------------------------------------------------
