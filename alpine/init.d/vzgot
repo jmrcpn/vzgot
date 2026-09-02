@@ -5,18 +5,18 @@ description="Startup and shutdown ONBOOT vzgot containers"
 extra_started_commands="reload"
 
 depend() {
-    need net
+    need localmount net
     need cgroups
-    after firewall
+    after firewall udev mdev
     use logger
 }
 
 start_pre() {
     # 0 We need loop when working in 'ext4' mode
-    modprone -q loop 
+    modprobe -q loop 
     # 1. Need a bride interface specifi to container
     if ! ip link show dev vz-br0 >/dev/null 2>&1; then
-        ebegin "Bridge vz-br0i creation"
+        ebegin "Bridge vz-br0 creation"
         ip link add name vz-br0 type bridge
         ip addr add 192.0.2.1/24 dev vz-br0
         ip link set dev vz-br0 up
@@ -51,7 +51,11 @@ start() {
     # Préparation système et cgroups v2
     sysctl --system -q >/dev/null 2>&1
     modprobe fuse >/dev/null 2>&1
+    # mounting  loop device (if any)
+    mount -a -O loop 2>/dev/null || true
 
+    #cgroup configuration
+    #Caution! # CONFIG_RT_GROUP_SCHED need to be set in kernel config
     if [ -f "${CGROUP}/cgroup.controllers" ]; then
         echo "+cpu +cpuset +memory +pids" > "${CGROUP}/cgroup.subtree_control" 2>/dev/null || true
     fi

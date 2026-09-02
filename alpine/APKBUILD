@@ -1,16 +1,23 @@
 #maintainer:	<Jean-Marc Pigeon <jmp@safe.ca>>
 pkgname=vzgot
-pkgver=26.08.15
+pkgver=26.08.40
 pkgrel=0
 pkgdesc="Lightweight C-based container manager supervisor"
 url="https://github.com/jmrcpn/vzgot"
 arch="all"
 license="GPL-3.0-or-later"
 makedepends="linux-headers libcap-dev"
+depends="musl mount libc-utils bash net-tools bind-tools coreutils xz rsync iproute2"
 options="!check"
 
-# Déclaration des sous-paquets générés
+# Sub packages
 subpackages="$pkgname-openrc $pkgname-sysv $pkgname-systemd"
+
+install="
+         $pkgname-openrc.post-install
+         $pkgname-openrc.post-upgrade
+	 $pkgname-openrc.post-deinstall
+	"
 
 source="$pkgname-$pkgver.tar.gz"
 builddir="$srcdir/$pkgname-$pkgver"

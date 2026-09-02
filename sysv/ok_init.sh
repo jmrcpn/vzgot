@@ -168,6 +168,8 @@ case "$1" in
 	sysctl --system -q > /dev/null
 	#make sure to have a we have the fuse device
 	modprobe fuse
+	# mounting  loop device (if any)
+        mount -a -O loop 2>/dev/null || true
 	#cgroup configuration
 	#Caution! # CONFIG_RT_GROUP_SCHED need to be set in kernel config
 	if [ -f ${CGROUP}/cgroup.controllers ] ; then

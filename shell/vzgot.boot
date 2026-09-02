@@ -131,7 +131,7 @@ if [ -x `dirname $0`/vzgot.boot.${FLINUX} ] ; then
   `dirname $0`/vzgot.boot.${FLINUX} ${CONTNAME}
 else
    echo "`dirname $0`/vzgot.boot for ${DISTRIB} is missing"
-  /usr/bin/true
+  true
 fi
 
 RETVAL=$?

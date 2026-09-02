@@ -55,7 +55,7 @@ case "$VZFS" in
     rm -fr $VZSPOOL/$CONTNAME
     fallocate -l $VZFS_SIZE $VZSPOOL/$CONTNAME
     mke2fs -q -t ext4 -j -L$CONTNAME $VZSPOOL/$CONTNAME
-    echo -e "$VZSPOOL/$CONTNAME\t$VZDIR/$CONTNAME\text4\tdefaults\t0 0" \
+    echo -e "$VZSPOOL/$CONTNAME\t$VZDIR/$CONTNAME\text4\tloop,defaults,nofail\t0 0" \
 	     >> /etc/fstab
     if [ -x /usr/bin/systemctl ] ; then
       systemctl daemon-reload

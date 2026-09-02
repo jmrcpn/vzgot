@@ -1,7 +1,7 @@
 Source: vzgot
 Section: admin
 Priority: optional
-Maintainer: To be defined 
+Maintainer: Jean-Marc Pigeon <jmp@safe.ca> 
 Build-Depends: debhelper-compat (= 13), build-essential, libcap-dev
 Standards-Version: 4.6.2
 Homepage: https://github.com/jmrcpn/vzgot

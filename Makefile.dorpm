@@ -100,6 +100,7 @@ doapl	:
 	   @ cp -a						\
 		 alpine/APKBUILD				\
 		 alpine/init.d					\
+		 alpine/vzgot-openrc.*				\
 		 $(APLR)/alpine/
 	   @ #adding configuration file
 	   @ cp -a						\
@@ -169,8 +170,8 @@ install	:
 	   @ install -m 0644 conf/vzgot_config $(DESTDIR)/etc/$(APPNAME)
 	   @ install -m 0644 conf/vzgot_list $(DESTDIR)/etc/$(APPNAME)
 	   @ install -m 0644 conf/online.tpl $(DESTDIR)/etc/$(APPNAME)
-	   @ install -d $(DESTDIR)/var/lib/$(APPNAME)/vztemplate
-	   @ cp -ap vztemplates $(DESTDIR)/var/lib/$(APPNAME)/
+	   @ install -d $(DESTDIR)/var/lib/$(APPNAME)
+	   @ cp -ap vztemplates/ $(DESTDIR)/var/lib/$(APPNAME)/
 	   @ cp -ap etc $(DESTDIR)/var/lib/$(APPNAME)
 	   @ install -d $(DESTDIR)/var/lib/$(APPNAME)
 	   @ cp -ap etc $(DESTDIR)/var/lib/$(APPNAME)
