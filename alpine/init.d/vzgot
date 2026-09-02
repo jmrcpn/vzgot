@@ -6,8 +6,33 @@ extra_started_commands="reload"
 
 depend() {
     need net
+    need cgroups
     after firewall
     use logger
+}
+
+start_pre() {
+    # 0 We need loop when working in 'ext4' mode
+    modprone -q loop 
+    # 1. Need a bride interface specifi to container
+    if ! ip link show dev vz-br0 >/dev/null 2>&1; then
+        ebegin "Bridge vz-br0i creation"
+        ip link add name vz-br0 type bridge
+        ip addr add 192.0.2.1/24 dev vz-br0
+        ip link set dev vz-br0 up
+        sysctl -q net.ipv4.ip_forward=1
+        eend $?
+    fi
+}
+
+stop_post() {
+    # 2. cleaning bridge
+    if ip link show dev vz-br0 >/dev/null 2>&1; then
+        ebegin "Cleaning bridge vz-br0"
+        ip link set dev vz-br0 down
+        ip link delete vz-br0 type bridge
+        eend $?
+    fi
 }
 
 WEIGHT=10000

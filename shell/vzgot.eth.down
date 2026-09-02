@@ -1,4 +1,4 @@
-#! /usr/bin/bash
+#!/usr/bin/env bash
 #echo -n "DEBUG PID=$$ Doing <$0>  " ; date
 #----------------------------------------------------
 #shell used to setup the host part (network, cgroup)
@@ -31,7 +31,7 @@ else
   IPNUM=`dig +short ${FULLNAME}`
 fi
 if [ -n "${IPNUM}" ] ; then
-  /usr/sbin/ip route del ${IPNUM} dev ${BRIDGENAME}
+  ip route del ${IPNUM} dev ${BRIDGENAME}
   ret=$?
   if [ $ret -ne 0 ]; then
     echo "$0, Host is unable to delete route to container ${CONTNAME}"

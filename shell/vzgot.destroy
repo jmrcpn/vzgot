@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 #----------------------------------------------------
 #shell used to remove the root file system for a
 #container.
@@ -55,7 +55,7 @@ case "$VZFS" in
     if [ -x /usr/bin/systemctl ] ; then
       systemctl daemon-reload
       fi
-    umount $VZSPOOL/$CONTNAME
+    umount $VZSDIR/$CONTNAME
     rm $VZSPOOL/$CONTNAME
     rm -r $VZDIR/$CONTNAME
     ret=$?

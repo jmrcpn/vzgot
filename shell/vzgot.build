@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 #----------------------------------------------------
 #shell used to build the root file system for the
 #container, incoming file is a tar file to

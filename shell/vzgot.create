@@ -1,4 +1,4 @@
-#! /usr/bin/bash
+#!/usr/bin/env bash
 #-------------------------------------------------------------------
 #procedure to install a specific VZserver 
 #$1 is the vzserver node name    (must include domain name)

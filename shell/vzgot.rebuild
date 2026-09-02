@@ -1,4 +1,4 @@
-#! /usr/bin/bash
+#!/usr/bin/env bash
 #vzgot.rebuild
 #===================================================================
 #procedure to rebuild from start a list of container

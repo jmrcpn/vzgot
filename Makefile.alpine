@@ -1,0 +1,26 @@
+#--------------------------------------------------------------------
+# Define Alpine APK packaging function
+#--------------------------------------------------------------------
+# To install needed components:
+# apk add alpine-sdk libcap-dev linux-headers
+# addgroup $(USER) abuild
+APKHOME	= $(HOME)/packages/$(APPNAME)
+
+doapk	: vztar
+	  @ echo "==> Production du paquet APK Alpine..."
+	  mv $(APPNAME)-$(VERSION)*.tar.gz alpine/
+	  @ cd alpine && abuild checksum && abuild -r
+	  @ rm -fr alpine/$(APPNAME)-$(VERSION)*.tar.gz
+	  @ echo ""
+	  @ echo "================================================================="
+	  @ echo "  Paquets APK générés avec succès !"
+	  @ echo "  Chemin absolu : $(APKHOME)/$$(uname -m)/"
+	  @ echo ""
+	  @ echo "  Pour installer VZGOT (OpenRC) :"
+	  @ echo "    doas apk add $(APKHOME)/$$(uname -m)/$(APPNAME)-$(VERSION)-r0.apk \\"
+	  @ echo "                 $(APKHOME)/$$(uname -m)/$(APPNAME)-openrc-$(VERSION)-r0.apk"
+	  @ echo ""
+	  @ echo "  Pour installer VZGOT (SysV init) :"
+	  @ echo "    doas apk add $(APKHOME)/$$(uname -m)/$(APPNAME)-$(VERSION)-r0.apk \\"
+	  @ echo "                 $(APKHOME)/$$(uname -m)/$(APPNAME)-sysv-$(VERSION)-r0.apk"
+	  @ echo "================================================================="

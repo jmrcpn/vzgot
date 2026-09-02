@@ -1,4 +1,4 @@
-#! /usr/bin/bash
+#!/usr/bin/env bash
 #----------------------------------------------------
 #shell used to set container to be bootable (on state)
 #$1 is the container name

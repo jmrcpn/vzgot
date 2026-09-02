@@ -1,4 +1,4 @@
-#! /usr/bin/bash
+#!/usr/bin/env bash
 #-------------------------------------------------------------------
 #procedure to move a vzgot container from one remote server to the
 #local server

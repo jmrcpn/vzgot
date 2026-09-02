@@ -1,4 +1,4 @@
-#! /usr/bin/bash
+#!/usr/bin/env bash
 #echo -n "DEBUG PID=$$ Doing <$0>  " ; date
 #----------------------------------------------------
 #shell used to setup the host part (network, cgroup)
@@ -27,16 +27,16 @@ if [ -z "${HOMEFS}" -o -z "${FULLNAME}" ] ; then
 #======================================================================
 #network setup from HOST standpoin
 #to be sure to start fresh with veth pair
-/usr/sbin/ip link del v-${CONTNAME} > /dev/null 2>&1
+ip link del v-${CONTNAME} > /dev/null 2>&1
 #creation the veth pair.
-/usr/sbin/ip link add name v-${CONTNAME} type veth peer name eth0
+ip link add name v-${CONTNAME} type veth peer name eth0
 ret=$?
 if [ $ret -ne 0 ]; then
   echo "$0, unable to create veth ${CONTNAME} To/From pair"
   exit $ret
   fi
 #activating vteh HOST interface
-/usr/sbin/ip link set  v-${CONTNAME} up
+ip link set  v-${CONTNAME} up
 ret=$?
 if [ $ret -ne 0 ]; then
   echo "$0, unable to activate veth HOST part"
@@ -50,7 +50,7 @@ if [ $ret -ne 0 ]; then
   exit $ret
   fi
 #giving the "from" part of the pair to VZ
-/usr/sbin/ip link set eth0 netns $VEPID
+ip link set eth0 netns $VEPID
 ret=$?
 if [ $ret -ne 0 ]; then
   echo "$0, unable to give v-${CONTNAME} veth pair to container process"
@@ -64,7 +64,7 @@ else
   IPNUM=`dig +short ${FULLNAME}`
 fi
 if [ -n "${IPNUM}" ] ; then
-  /usr/sbin/ip route add ${IPNUM} dev ${BRIDGENAME}
+  ip route add ${IPNUM} dev ${BRIDGENAME}
   ret=$?
   if [ $ret -ne 0 ]; then
     echo "$0, Host is unable to add route to container ${CONTNAME}"

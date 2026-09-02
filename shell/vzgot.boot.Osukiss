@@ -1,4 +1,4 @@
-#! /usr/bin/bash
+#!/usr/bin/env bash
 #----------------------------------------------------
 #shell used to make sure container rootfs contents is 
 #container ready.
@@ -62,7 +62,7 @@ sed -i						\
 	${VZROOT}/etc/rc.local
 
 #to remove clock initialization
-/sbin/chroot ${VZROOT} chkconfig --del setclock
+chroot ${VZROOT} chkconfig --del setclock
 
 #Removing clearing dmesg fing buffer
 if [ -x ${VZROOT}/usr/bin/dmesg ] ; then

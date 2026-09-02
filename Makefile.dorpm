@@ -126,6 +126,7 @@ doapl	:
 		Makefile					\
 		Makefile.dorpm					\
 		Makefile.debian					\
+		Makefile.alpine					\
 		Makefile.vers					\
 		$(APPNAME).spec					\
 	      	$(APLR)/

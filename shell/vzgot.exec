@@ -1,4 +1,4 @@
-#! /usr/bin/bash
+#!/usr/bin/env bash
 #echo "DEBUG PID=$$ Doing <$0>"
 #----------------------------------------------------
 #shell used to execute a process within the
