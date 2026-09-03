@@ -1,5 +1,6 @@
 [Unit]
 Description=Vzgot Containers
+Documentation=man:vzgot(8)
 After=bird.service
 Requires=bird.service
 

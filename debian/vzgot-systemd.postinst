@@ -2,14 +2,12 @@
 set -e
 
 if [ "$1" = "configure" ]; then
-    if systemctl is-active --quiet NetworkManager; then
-        systemctl reload NetworkManager.service || true
-        systemctl restart NetworkManager.service || true
+    # Rechargement de NetworkManager si présent, sans passer par systemctl direct
+    if command -v NetworkManager >/dev/null 2>&1; then
+        invoke-rc.d NetworkManager reload 2>/dev/null || true
     fi
-    systemctl daemon-reload >/dev/null || true
-    systemctl enable vzgot.service >/dev/null || true
-    systemctl restart vzgot.service >/dev/null || true
 fi
 
 #DEBHELPER#
+
 exit 0

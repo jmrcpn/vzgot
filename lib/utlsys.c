@@ -74,7 +74,7 @@ int status;
 status=0;
 if (typeflag==FTW_DP) {
   if (rmdir(fpath)<0) {
-    (void) log_alert(0,"%s Can not remove directoy <%s> (error=<%s>)",
+    (void) log_alert(0,"%s Can not remove directory <%s> (error=<%s>)",
                          OPEP,fpath,strerror(errno));
     status=-1;
     }
@@ -338,7 +338,7 @@ while (proceed==true) {
   switch (phase) {
     case 0	:	//get list cpu available on HOST
       if (sys_get_cpu_host_list(&hostcpus)==false) {
-	(void) log_alert(0,"%s, unable to get HOST CPUs defintion (aborting!)",
+	(void) log_alert(0,"%s, unable to get HOST CPUs definition (aborting!)",
 			    OPEP);
 	phase=999;
 	}

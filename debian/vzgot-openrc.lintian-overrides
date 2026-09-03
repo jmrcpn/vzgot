@@ -1,0 +1,9 @@
+
+
+# openrc script is clean
+vzgot-openrc: init.d-script-does-not-source-init-functions [etc/init.d/vzgotrc]
+vzgot-openrc: init.d-script-missing-lsb-section [etc/init.d/vzgotrc]
+vzgot-openrc: missing-systemd-service-for-init.d-script vzgotrc [etc/init.d/vzgotrc]
+vzgot-openrc: script-in-etc-init.d-not-registered-via-update-rc.d [etc/init.d/vzgotrc]
+vzgot-openrc: unusual-interpreter /sbin/openrc-run [etc/init.d/vzgotrc]
+

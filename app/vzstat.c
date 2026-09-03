@@ -69,7 +69,7 @@ static void usage()
 (void) fprintf(stderr,"\t\t-r           : Display container status every sec\n");
 (void) fprintf(stderr,"\t\t-h           : display usage\n");
 (void) fprintf(stderr,"\t\t-v           : verbose debug\n");
-(void) fprintf(stderr,"\t\tcontainer    : container name to display infomation\n");
+(void) fprintf(stderr,"\t\tcontainer    : container name to display information\n");
 }
 /*
 ^L

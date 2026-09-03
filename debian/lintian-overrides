@@ -1,0 +1,12 @@
+
+#vzgot MUST be a statically-linked-binary
+#
+vzgot: statically-linked-binary [usr/libexec/vzgot/bin/vzmon]
+
+# On purpose directory creation
+vzgot: dir-or-file-in-var-run [var/run/vzgot/]
+vzgot: non-standard-toplevel-dir [vzgot/]
+vzgot: package-contains-empty-directory [vzgot/]
+
+#no manual yet
+vzgot: no-manual-page [usr/sbin/vzgot]

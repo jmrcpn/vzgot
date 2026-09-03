@@ -6,46 +6,82 @@ Build-Depends: debhelper-compat (= 13), build-essential, libcap-dev
 Standards-Version: 4.6.2
 Homepage: https://github.com/jmrcpn/vzgot
 
-# --- Paquet Principal: vzgot ---
+#================================================================
+# --- vzgot main program
 Package: vzgot
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, 
- 	bash,
 	bc,
 	bird2 | bird,
 	bridge-utils,
-	coreutils,
 	dnsutils,
 	gawk,
 	iproute2,
 	libcap2,
 	procps,
-	rsync,
-	sed,
-	util-linux
-Description: An application to drive linux container
- vzgot is a set of tools to manage linux containers.
+	rsync
+Recommends: vzgot-init
+Description: lightweight Linux container management engine
+ vzgot is a set of tools to manage Linux containers.
  It allows running a wide range of distributions, as long as
  their kernel is a Linux one.
 
-# --- Sous-paquet: vzgot-sysv ---
-Package: vzgot-sysv
-Architecture: all
-Depends: ${misc:Depends}, vzgot (= ${binary:Version}), sysvinit-utils
+#================================================================
+# --- SYSV vzgot starting script
+Package:	vzgot-sysv
+Architecture:	all
+Depends:	${misc:Depends},
+		vzgot (= ${binary:Version})
+Conflicts:	vzgot-openrc,
+		vzgot-systemd
+Replaces:	vzgot-openrc,
+		vzgot-systemd
+Provides:	vzgot-init
 Description: vzgot configuration file for sysV
- This package allows using vzgot on a simple sysv (sysvinit)
- linux system.
+ This package provides script to boot vzgot daemon
+ on a Linux using a pure sysV as init system
 
-# --- Sous-paquet: vzgot-systemd ---
-Package: vzgot-systemd
-Architecture: all
-Depends: ${misc:Depends}, vzgot (= ${binary:Version}), systemd
+#================================================================
+# --- Openrc type vzgot starting script
+Package:	vzgot-openrc
+Architecture:	all
+Depends:	${misc:Depends},
+		openrc,
+		vzgot (= ${binary:Version})
+Conflicts:	vzgot-sysv,
+		vzgot-systemd
+Replaces:	vzgot-sysv,
+		vzgot-systemd
+Provides:	vzgot-init
+Description: vzgot configuration file for openrc
+ This package provides script to boot vzgot daemon
+ on a Linux using openrc as init system
+
+#================================================================
+# --- systemd type vzgot starting script
+Package:	vzgot-systemd
+Architecture:	 all
+Depends:	${misc:Depends},
+		systemd,
+		vzgot (= ${binary:Version})
+Conflicts:	vzgot-sysv,
+		vzgot-openrc
+Replaces:	vzgot-sysv,
+		vzgot-openrc
+Provides:	vzgot-init
 Description: vzgot configuration file for systemd
- This package allows using vzgot on a linux systemd system.
+ This package provides script to boot vzgot daemon
+ on a Linux using systemd as init system
 
-# --- Sous-paquet: vzgot-apparmor ---
-Package: vzgot-apparmor
-Architecture: all
-Depends: ${misc:Depends}, vzgot (= ${binary:Version}), apparmor
+#================================================================
+# --- vzgot interface to apparamor script
+Package:	vzgot-apparmor
+Architecture:	all
+Depends:	${misc:Depends},
+		apparmor,
+		vzgot (= ${binary:Version})
 Description: vzgot configuration file to be used with apparmor
- This package allows having vzgot with apparmor facilities.
+ This package allows vzgot to use kernel with apparmor
+ facilities to filter container access.
+
+#================================================================

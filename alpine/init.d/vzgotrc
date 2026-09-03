@@ -190,3 +190,21 @@ reload() {
     ebegin "Reloading vzgot configuration"
     eend 0 "Nothing to do"
 }
+
+force-reload() {
+    ebegin "Force-reload vzgot configuration"
+    eend 0 "Nothing to do"
+}
+
+status() {
+    ebegin "vzgot staus"
+    eend 0 "Nothing to do"
+}
+
+restart() {
+    ebegin "Restarting vzgot"
+    stop
+    sleep 2
+    start
+    eend $?
+}

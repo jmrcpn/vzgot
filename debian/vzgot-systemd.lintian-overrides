@@ -1,0 +1,3 @@
+#vzgot-systemd: package-supports-alternative-init-but-no-init.d-script [usr/lib/systemd/system/vzgot.service]
+vzgot-systemd: init.d-script-does-not-source-init-functions [etc/init.d/vzgot]
+vzgot-systemd: script-in-etc-init.d-not-registered-via-update-rc.d [etc/init.d/vzgot]

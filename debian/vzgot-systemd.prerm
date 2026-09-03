@@ -2,14 +2,12 @@
 set -e
 
 if [ "$1" = "remove" ]; then
-    systemctl stop vzgot.service >/dev/null || true
-    systemctl disable vzgot.service >/dev/null || true
-    systemctl daemon-reload >/dev/null || true
-    if systemctl is-active --quiet NetworkManager; then
-        systemctl reload NetworkManager.service || true
-        systemctl restart NetworkManager.service || true
+    # Rechargement propre de NetworkManager sans appeler systemctl
+    if command -v NetworkManager >/dev/null 2>&1; then
+        invoke-rc.d NetworkManager reload 2>/dev/null || true
     fi
 fi
 
 #DEBHELPER#
+
 exit 0

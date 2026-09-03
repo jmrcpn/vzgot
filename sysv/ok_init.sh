@@ -1,20 +1,19 @@
-#!/usr/bin/bash
+#!/bin/sh
 #
 # vzgot		This shell script takes care of starting and stopping
 #               vzgot container with the "ON" status
 #
-# description:	Scan vzgot vdir directory to find out about container
-#		and start them if requested.
+# description:	Startup/shutdown vzgot containers in ONBOOT="yes" mode
 #
 # chkconfig: - 98 2
-#   description: Startup/shutdown vzgot containers
+#
 ### BEGIN INIT INFO
 # Provides: vzgot
 # Required-Start: network
 # Required-Stop:
-# Default-Start: 3 4 5
-# Default-Stop: 0 1 2 6
-# Short-Description: starting container
+# Default-Start: 2 3 4 5
+# Default-Stop: 0 1 6
+# Short-Description: starting containers
 ### END INIT INFO
 
 MODE="sysv"
@@ -126,7 +125,7 @@ for cont in ${tostop}
     fi
   done
 log_status "Stopping all ${count} containers ASAP" 0
-for ((t=1;t<$MAXT;t++))
+while [ "$t" -lt "$MAXT" ]; 
   do
   remain=0;
   for cont in ${tostop}
@@ -163,7 +162,7 @@ return ${ret}
 #------------------------------------------------------------------
 ret=0;
 case "$1" in
-  start)
+  start		)
 	#make sure to have a good sysctl
 	sysctl --system -q > /dev/null
 	#make sure to have a we have the fuse device
@@ -186,26 +185,30 @@ case "$1" in
 	ret=$?;
 	;;
 
-  stop)
+  stop		)
 	# Stopping daemons.
 	vzgotstop;
 	ret=$?;
 	;;
 
-  restart)
+  restart	)
 	$0 stop
 	$0 start
 	;;
 
-  reload)
+  reload	)
 	echo "Nothing to do"
 	;;
 
-  status)
+  force-reload	)
+	echo "Nothing to do"
+	;;
+
+  status	)
 	status $PROG
 	;;
-  *)
-	echo "Usage: vzgot {start|stop|restart|status}"
+  *		)
+	echo "Usage: vzgot {start|stop|restart|reload|force-reload|status}"
 	exit 1
 esac
 

@@ -86,8 +86,7 @@ doapl	:
 	   @ cp -a app/*.c $(APLR)/app/
 	   @ cp -a lib/*.[ch] $(APLR)/lib/
 	   @ cp -a utilities/*.c $(APLR)/utilities/
-	   @ cp -a shell/vzgot* $(APLR)/shell
-	   @ cp -a shell/vzctl.* $(APLR)/shell
+	   @ cp -a shell/vzgot.* $(APLR)/shell
 	   @ cp -a systemd/* $(APLR)/systemd/
 	   @ cp -a sysv/* $(APLR)/sysv/
 	   @ cp -a contrib/* $(APLR)/contrib
@@ -137,7 +136,8 @@ doapl	:
 
 #--------------------------------------------------------------------
 #installing application
-INITDIR ?= /etc/rc.d/init.d
+INITDIR ?= /etc//init.d
+OPENRCD	?= /etc/init.d
 SYSTEMD	?= /usr/lib/systemd
 install	:
 	   @ install -d $(DESTDIR)/usr/sbin/
@@ -158,6 +158,7 @@ install	:
 	   	$(DESTDIR)/usr/libexec/$(APPNAME)/bin
 	   @ #adding init file
 	   @ install -d $(DESTDIR)/$(INITDIR)
+	   @ install -d $(DESTDIR)/$(OPENRCD)
 	   @ # Adding sysctl configuration file
 	   @ install -d $(DESTDIR)/etc/sysctl.d
 	   @ install -m 0644 conf/sysctl.conf				\
@@ -191,7 +192,6 @@ install	:
 	   @ #adding application shell script
 	   @ install -d $(DESTDIR)/usr/libexec/$(APPNAME)/shell
 	   @ install shell/vzgot.* $(DESTDIR)/usr/libexec/$(APPNAME)/shell/
-	   @ install shell/vzctl.* $(DESTDIR)/usr/libexec/$(APPNAME)/shell/
 	   @ install -d $(DESTDIR)/var/lib/$(APPNAME)/systemd/
 	   @ install -vD						\
 		sysv/ok_init.sh $(DESTDIR)/var/lib/$(APPNAME)/systemd/$(APPNAME).init
@@ -204,8 +204,8 @@ install	:
 		-t $(DESTDIR)/etc/NetworkManager/system-connections/
 	   @ install -vDm0640 sysv/ifconfig.vz-br0 -t $(DESTDIR)/etc/sysconfig
 	   @ install -vDm0755						\
-		alpine/init.d/vzgot					\
-		-t $(DESTDIR)/etc/init.d/
+		alpine/init.d/vzgotrc					\
+		-t $(DESTDIR)/$(OPENRCD)/
 
 #--------------------------------------------------------------------
 RPMDIR	=	$(CURDIR)/rpmbuild

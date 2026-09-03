@@ -20,5 +20,6 @@ override_dh_auto_install:
 	# Global installation into debhelper staging directory
 	dh_auto_install -- DESTDIR=debian/tmp		\
 	                   INITDIR=/etc/init.d		\
-	                   SYSTEMD=/lib/systemd
+	                   OPENRCD=/etc/init.d		\
+	                   SYSTEMD=/usr/lib/systemd
 

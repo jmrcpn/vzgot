@@ -87,6 +87,7 @@ tstonl.o:							\
 #compiler and loader options
 CC=gcc $(OPTIME) $(VZDEBUG) -fPIE
 LD=$(CC)
+LDFLAGS+=-Wl,-z,relro -Wl,-z,now
 LIBS=								\
 	$(VZLIB)						\
 	 -lm

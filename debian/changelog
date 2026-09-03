@@ -1,4 +1,4 @@
-vzgot (26.08.40) upstream-release; urgency=medium
+vzgot (26.08.51) UNRELEASED; urgency=medium
 
   * Automated build from spec-file infrastructure.
- -- Jean-Marc Pigeon <jmp@safe.ca>  Wed, 02 Sep 2026 11:25:42 -0400
+ -- Jean-Marc Pigeon <jmp@safe.ca>  Thu, 03 Sep 2026 14:54:23 -0400

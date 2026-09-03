@@ -96,12 +96,12 @@ if ((status=mkdir(dirname,mode))<0) {
   switch (errno) {
     case EEXIST :       //Directory already existing
       if ((status=chmod(dirname,mode))<0) {
-        (void) log_alert(0,"%s Can not change directoy <%s> mode to '%o' "
+        (void) log_alert(0,"%s Can not change directory <%s> mode to '%o' "
                            "(error=<%s>)",OPEP,dirname,mode,strerror(errno));
         }
       break;
     default     :       //This a real error
-      (void) log_alert(0,"%s Can not create directoy <%s> (error=<%s>)",
+      (void) log_alert(0,"%s Can not create directory <%s> (error=<%s>)",
                          OPEP,dirname,strerror(errno));
       break;
     }
@@ -167,7 +167,7 @@ static struct {
 		MK("power management",DISCARD),
 		MK("cache_alignment",KEEP),
 		MK("initial apicid",DISCARD),
-		MK("adresses sizes",KEEP),
+		MK("addresses sizes",KEEP),
 		MK("fpu_exception",KEEP),
 		MK("physical id",KEEP),
 		MK("model name",MODEL),

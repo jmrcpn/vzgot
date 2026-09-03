@@ -152,7 +152,7 @@ while (proceed==true) {
       break;
     case 6	:	//getting an exclusive access
       if (flock(handle,LOCK_EX)<0) {
-        (void) log_alert(0,"Unable to get exclusive acces "
+        (void) log_alert(0,"Unable to get exclusive access "
 			   "to lock <%s> (error=<%s>) "
 			   "Aborting!",lockname,strerror(errno));
 	(void) close(handle);

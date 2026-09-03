@@ -27,7 +27,7 @@ typedef	enum	{
 	d_log,		/*logs directory 	*/
 	d_lock,		/*locking directory	*/
 	d_vzgot,	/*application main dir	*/
-	d_null		/*no directoy specified	*/
+	d_null		/*no directory specified*/
 	}DIRENUM;
 
 

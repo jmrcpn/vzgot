@@ -1,3 +1,4 @@
 etc/NetworkManager/system-connections/vz-br0.nmconnection
 var/lib/vzgot/systemd/vzgot.init
-lib/systemd/system/vzgot.service
+usr/lib/systemd/system/vzgot.service
+etc/init.d/vzgot

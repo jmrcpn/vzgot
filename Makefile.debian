@@ -10,3 +10,8 @@ dodeb	:
 	  @ dpkg-buildpackage -b -uc -us
 	  @ #to install vzgot
 	  @ # dpkg -i ../vzgot_*.deb
+	  @ dh_clean
+
+debcheck:
+	  @ #lintian -L ">=error" ../*.changes
+	  @ lintian -v -i -I -E --pedantic  ../*.changes

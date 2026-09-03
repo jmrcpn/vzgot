@@ -17,7 +17,7 @@ if [ "$1" = "configure" ]; then
         echo -n "#Installation date: "
         date
         head -1 /var/lib/vzgot/etc/resolv.conf 2>/dev/null || true
-        /bin/sed 's/#.*//g' /etc/resolv.conf
+        sed 's/#.*//g' /etc/resolv.conf
         ) >> /var/lib/vzgot/etc/resolv.conf
     fi
 

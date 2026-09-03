@@ -1,0 +1,6 @@
+
+
+# sysv script is clean
+vzgot-sysv: init.d-script-does-not-source-init-functions [etc/init.d/vzgot]
+vzgot-sysv: missing-systemd-service-for-init.d-script vzgot [etc/init.d/vzgot]
+

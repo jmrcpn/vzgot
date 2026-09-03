@@ -1,0 +1,12 @@
+#!/bin/sh
+set -e
+
+if [ "$1" = "configure" ]; then
+    if command -v rc-update >/dev/null 2>&1; then
+        rc-update add vzgot default 2>/dev/null || true
+    fi
+fi
+
+#DEBHELPER#
+
+exit 0
