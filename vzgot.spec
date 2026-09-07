@@ -3,7 +3,7 @@
 %bcond_with	debug
 #-----------------------------------------------------------------------------
 Name		:	vzgot
-Version		:	26.08.51
+Version		:	26.09.3
 Release		:	0%{?dist}
 Summary		:	An application to drive linux container
 Group		:	System Environment/Daemons
@@ -100,7 +100,6 @@ long their kernel is a Linux one
 %{_prefix}/libexec/%{name}/shell/%{name}.movefrom
 %{_prefix}/libexec/%{name}/shell/%{name}.rebuild
 %{_prefix}/libexec/%{name}/shell/%{name}.standby
-%{_prefix}/libexec/%{name}/shell/vzctl.standby
 %{_sysconfdir}/%{name}/distributions/
 %dir %{_sysconfdir}/%{name}/sites_data
 %dir %{_sysconfdir}/%{name}/names
@@ -206,7 +205,7 @@ This package allow to use vzgot on openrc init system.
 #-----------------------------------------------------------------------------
 %files                  openrc
 %defattr(-, root,root,-)
-%{_sysconfdir}/init.d/%{name}
+%{_sysconfdir}/init.d/%{name}rc
 
 #-----------------------------------------------------------------------------
 %post			openrc
@@ -323,7 +322,7 @@ date > %{name}-%{version}-%{release}.build_date
 
 #-----------------------------------------------------------------------------
 %changelog
-* Thu Sep 03 2026 Jean-Marc Pigeon <jmp@safe.ca> - 26.08.51-0
+* Mon Sep 07 2026 Jean-Marc Pigeon <jmp@safe.ca> - 26.09.3-0
 - Automatic build from Makefile.
 
 #-----------------------------------------------------------------------------

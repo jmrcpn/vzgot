@@ -42,6 +42,7 @@ include		./Makefile.vers
 include		./Makefile.dorpm
 include		./Makefile.alpine
 include		./Makefile.debian
+include		./Makefile.install
 #--------------------------------------------------------------------
 #SAFE Makefile Management
 -include	./Makefile.safe

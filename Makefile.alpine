@@ -4,10 +4,10 @@
 # To install needed components:
 # apk add alpine-sdk libcap-dev linux-headers
 # addgroup $(USER) abuild
-APKHOME	= $(HOME)/packages/$(APPNAME)
+APKHOME	= $(HOME)/packages/$(APPNAME)-$(VERSION)
 
 doapk	: vztar
-	  @ echo "==> Production du paquet APK Alpine..."
+	  @ echo "==> Building Alpine APK..."
 	  @ rm -f $(APKHOME)/$$(uname -m)/$(APPNAME)*
 	  @ mv $(APPNAME)-$(VERSION)*.tar.gz alpine/
 	  @ cd alpine && abuild checksum && abuild -r
@@ -25,3 +25,9 @@ doapk	: vztar
 	  @ echo "    doas apk add $(APKHOME)/$$(uname -m)/$(APPNAME)-$(VERSION)-r0.apk \\"
 	  @ echo "                 $(APKHOME)/$$(uname -m)/$(APPNAME)-sysv-$(VERSION)-r0.apk"
 	  @ echo "================================================================="
+
+apkcheck: # to check APKBUILD conformance
+	  @ echo "Checking APBUILD file"
+	  @ cd alpine ; apkbuild-lint APKBUILD
+	  @ echo "Completed APBUILD check"
+

@@ -108,7 +108,7 @@ typedef struct  {
 static void usage()
 
 {
-(void) fprintf(stderr,"%s Version %s\n",appname,apl_getvers());
+(void) fprintf(stderr,"%s: Version %s\n",appname,apl_getvers());
 (void) fprintf(stderr,"usage:  %s "
 		      "[-c confdir] "
 		      "[-d debug] "
@@ -116,6 +116,7 @@ static void usage()
 		      "[-h] "
 		      "[-p] "
 		      "[-v] "
+		      "[-V] "
 		      "action_word "
 		      "name [starter]\n",appname);
 (void) fprintf(stderr,"\t\t-c confdir   : Use alternative configuration directory (default: \"%s\")\n",
@@ -125,6 +126,7 @@ static void usage()
 (void) fprintf(stderr,"\t\t-h           : Display this help message and exit\n");
 (void) fprintf(stderr,"\t\t-p           : Start container in privileged mode\n");
 (void) fprintf(stderr,"\t\t-v           : Enable verbose debugging output\n");
+(void) fprintf(stderr,"\t\t-V           : Display version number\n");
 (void) fprintf(stderr,"\t\taction_word  : \n");
 (void) fprintf(stderr,"\t\t               boot: Boot container\n");
 (void) fprintf(stderr,"\t\t               onboot: Enable container autostart on Host boot sequence\n");
@@ -1769,7 +1771,7 @@ status=0;
 (void) openlog(appname,LOG_NDELAY|LOG_PID,LOG_DAEMON);
 (void) apl_settrap(true);
 argv=prc_preptitle(argc,argv,environ);
-while ((c=getopt(argc,argv,"+c:d:Ufhv"))!=EOF) {
+while ((c=getopt(argc,argv,"+c:d:UfhVv"))!=EOF) {
   switch(c) {
     case   'c'  :
       confdir=apl_freestr(confdir);
@@ -1783,6 +1785,10 @@ while ((c=getopt(argc,argv,"+c:d:Ufhv"))!=EOF) {
       break;
     case   'p'  :
       privileged=true;
+      break;
+    case   'V'  :
+      (void) fprintf(stderr,"%s: Version %s\n",appname,apl_getvers());
+      status=1;
       break;
     case   'v'  :
       verbose=true;

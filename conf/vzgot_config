@@ -29,8 +29,8 @@ NETIP6="fc00"
 # This is the cgroupv2 mount point.
 CGROUP="/sys/fs/cgroup"
 #==============================================================================
-# Container filesystem type (ext4, lvm, zfs)
-VZFS=ext4
+# Container filesystem type (loop-image, lvm, zfs)
+VZFS="loop-image"
 # Container default disk size
 VZFS_SIZE="20G"
 #==============================================================================

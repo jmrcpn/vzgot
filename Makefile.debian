@@ -5,11 +5,28 @@
 #sudo apt install dpkg-dev build-essential devscripts 
 #vzgot dependency
 #sudo apt install libcap-dev
+DEBHOME = $(realpath ..)
+DEBARCH	= `dpkg --print-architecture`
 
 dodeb	: 
+	  @ echo "==> Building Debian package for vzgot..."
 	  @ dpkg-buildpackage -b -uc -us
-	  @ #to install vzgot
-	  @ # dpkg -i ../vzgot_*.deb
+	  @ echo "================================================================="
+	  @ echo "  Debian package creation successful!"
+	  @ echo "  Absolut path : $(APKHOME)"
+	  @ echo ""
+	  @ echo "  To install VZGOT (systemd) :"
+	  @ echo "    sudo dpkg -i  $(DEBHOME)/$(APPNAME)_$(VERSION)_$(DEBARCH).deb \\"
+	  @ echo "		$(DEBHOME)/$(APPNAME)-systemd_$(VERSION)_all.deb"
+	  @ echo ""
+	  @ echo "  To install VZGOT (OpenRC) :"
+	  @ echo "    sudo dpkg -i  $(DEBHOME)/$(APPNAME)_$(VERSION)_$(DEBARCH).deb \\"
+	  @ echo "		$(DEBHOME)/$(APPNAME)-openrc_$(VERSION)_all.deb"
+	  @ echo ""
+	  @ echo "  To install VZGOT (SysV init) :"
+	  @ echo "    sudo dpkg -i  $(DEBHOME)/$(APPNAME)_$(VERSION)_$(DEBARCH).deb \\"
+	  @ echo "		$(DEBHOME)/$(APPNAME)-sysv_$(VERSION)_all.deb"
+	  @ echo "================================================================"
 	  @ dh_clean
 
 debcheck:

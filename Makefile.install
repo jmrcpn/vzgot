@@ -1,0 +1,160 @@
+#--------------------------------------------------------------------
+#Define ALL RPM function
+#--------------------------------------------------------------------
+#--------------------------------------------------------------------
+DEB_DATE=$(shell date -R)
+PACKAGER?= To be defined
+DIST	?= .dvl
+RPM_DATE = $(shell unset LANG; date "+%a %b %d %Y")
+CHANGELOG= * $(RPM_DATE) $(PACKAGER) - $(VERSION)-$(RELEASE)\n- Automatic build from Makefile.
+
+#--------------------------------------------------------------------
+vztar	:  doapl
+	   @ tar zcf $(APLR).tar.gz $(APLR)
+	   @ rm -fr $(APLR)
+	   @ echo $(APLR).tar.gz ready
+
+doapl	:
+	   @ rm -fr $(APLR).tar.gz
+	   @ mkdir -p						\
+		$(APLR)/apparmor				\
+		$(APLR)/conf					\
+		$(APLR)/contrib					\
+		$(APLR)/distributions				\
+		$(APLR)/etc					\
+		$(APLR)/etc/sysconfig				\
+		$(APLR)/etc/snmp				\
+		$(APLR)/lib					\
+		$(APLR)/shell					\
+		$(APLR)/systemd					\
+		$(APLR)/sysv					\
+		$(APLR)/utilities				\
+		$(APLR)/app
+	   @ #adding application sources
+	   @ cp -a apparmor/* $(APLR)/apparmor/
+	   @ cp -a app/*.c $(APLR)/app/
+	   @ cp -a lib/*.[ch] $(APLR)/lib/
+	   @ cp -a utilities/*.c $(APLR)/utilities/
+	   @ cp -a shell/vzgot.* $(APLR)/shell
+	   @ cp -a systemd/* $(APLR)/systemd/
+	   @ cp -a sysv/* $(APLR)/sysv/
+	   @ cp -a contrib/* $(APLR)/contrib
+	   @ cp -a distributions/* $(APLR)/distributions
+	   @ cp -a vztemplates $(APLR)/
+	   @ #adding debian packaging information
+	   @ cp -a debian $(APLR)/
+	   @ #adding alpine packaging information
+	   @ mkdir -p $(APLR)/alpine/
+	   @ cp -a						\
+		 alpine/APKBUILD				\
+		 alpine/init.d					\
+		 alpine/vzgot-openrc.*				\
+		 $(APLR)/alpine/
+	   @ #adding configuration file
+	   @ cp -a						\
+	   	conf/online.tpl					\
+	   	conf/sysctl.conf				\
+		conf/vzgot_config				\
+	   	conf/vzgot_list					\
+	   	$(APLR)/conf
+	   @ cp -a						\
+		README*						\
+		QUICK-START					\
+	   	$(APLR)
+	   @ cp -a 						\
+		   etc/users					\
+		   etc/groups					\
+		   etc/sudoers					\
+		   etc/resolv.conf				\
+		   etc/shadow					\
+		   etc/sysconfig				\
+		   etc/snmp					\
+		   $(APLR)/etc/
+	   @ #adding construction file
+	   @ cp -a 						\
+		Makefile					\
+		Makefile.install				\
+		Makefile.dorpm					\
+		Makefile.debian					\
+		Makefile.alpine					\
+		Makefile.vers					\
+		$(APPNAME).spec					\
+	      	$(APLR)/
+	   @ @ cp -a app/Makefile $(APLR)/app/
+	   @ @ cp -a lib/Makefile $(APLR)/lib
+	   @ @ cp -a utilities/Makefile $(APLR)/utilities/Makefile
+
+#--------------------------------------------------------------------
+#installing application
+INITDIR ?= /etc/etc/init.d
+OPENRCD	?= /etc/init.d
+SYSTEMD	?= /usr/lib/systemd
+install	:
+	   @ install -d $(DESTDIR)/usr/sbin/
+	   @ install -d $(DESTDIR)/var/run/$(APPNAME)
+	   @ #adding executable
+	   @ install app/vzgot $(DESTDIR)/usr/sbin
+	   @ #adding utlities,tests program
+	   @ install -d $(DESTDIR)/usr/libexec/$(APPNAME)/utilities
+	   @ install							\
+		   utilities/tstavg					\
+		   utilities/setcpu					\
+		$(DESTDIR)/usr/libexec/$(APPNAME)/utilities/
+	   @ # adding container monitoring
+	   @ install -d $(DESTDIR)/usr/libexec/$(APPNAME)/bin
+	   @ install							\
+	  	app/vzstat						\
+	  	app/vzmon						\
+	   	$(DESTDIR)/usr/libexec/$(APPNAME)/bin
+	   @ #adding init file
+	   @ install -d $(DESTDIR)/$(INITDIR)
+	   @ install -d $(DESTDIR)/$(OPENRCD)
+	   @ # Adding sysctl configuration file
+	   @ install -d $(DESTDIR)/etc/sysctl.d
+	   @ install -m 0644 conf/sysctl.conf				\
+		$(DESTDIR)/etc/sysctl.d/$(APPNAME).conf
+	   @ #adding configuration file
+	   @ install -d $(DESTDIR)/etc/$(APPNAME)
+	   @ cp -a 							\
+		distributions						\
+	   	$(DESTDIR)/etc/$(APPNAME)
+	   @ install -m 0644 conf/vzgot_config $(DESTDIR)/etc/$(APPNAME)
+	   @ install -m 0644 conf/vzgot_list $(DESTDIR)/etc/$(APPNAME)
+	   @ install -m 0644 conf/online.tpl $(DESTDIR)/etc/$(APPNAME)
+	   @ install -d $(DESTDIR)/var/lib/$(APPNAME)
+	   @ cp -ap vztemplates/ $(DESTDIR)/var/lib/$(APPNAME)/
+	   @ cp -ap etc $(DESTDIR)/var/lib/$(APPNAME)
+	   @ install -d $(DESTDIR)/var/lib/$(APPNAME)
+	   @ cp -ap etc $(DESTDIR)/var/lib/$(APPNAME)
+	   @ install -d $(DESTDIR)/var/lib/$(APPNAME)/etc/ssh
+	   @ install -d $(DESTDIR)/var/lib/$(APPNAME)/etc/ssh/server
+	   @ install -d $(DESTDIR)/var/lib/$(APPNAME)/etc/ssh/access
+	   @ install -d $(DESTDIR)/var/lib/$(APPNAME)/etc/sysconfig
+	   @ cp -ap contrib $(DESTDIR)/var/lib/$(APPNAME)
+	   @ #adding apparmor profile
+	   @ install -d $(DESTDIR)/etc/apparmor.d/
+	   @ cp -ap							\
+		apparmor/vzgot-profile					\
+		$(DESTDIR)/etc/apparmor.d/
+	   @ #adding templates directory
+	   @ install -d $(DESTDIR)/var/lib/$(APPNAME)/vztemplates
+	   @ install -d $(DESTDIR)/var/lib/$(APPNAME)/vzdir
+	   @ #adding application shell script
+	   @ install -d $(DESTDIR)/usr/libexec/$(APPNAME)/shell
+	   @ install shell/vzgot.* $(DESTDIR)/usr/libexec/$(APPNAME)/shell/
+	   @ install -d $(DESTDIR)/var/lib/$(APPNAME)/systemd/
+	   @ install -vD						\
+		sysv/ok_init.sh $(DESTDIR)/var/lib/$(APPNAME)/systemd/$(APPNAME).init
+	   @ install -vD						\
+	   	sysv/ok_init.sh $(DESTDIR)/$(INITDIR)/$(APPNAME)
+	   @ install -vDm0640						\
+		systemd/vzgot.service -t $(DESTDIR)/$(SYSTEMD)/system/
+	   @ install -vDm0600						\
+		systemd/vz-br0.nmconnection				\
+		-t $(DESTDIR)/etc/NetworkManager/system-connections/
+	   @ install -vDm0640 sysv/ifconfig.vz-br0 -t $(DESTDIR)/etc/sysconfig
+	   @ install -vDm0755						\
+		alpine/init.d/vzgotrc					\
+		-t $(DESTDIR)/$(OPENRCD)/
+
+#====================================================================

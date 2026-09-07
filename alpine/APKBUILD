@@ -1,6 +1,6 @@
 #maintainer:	<Jean-Marc Pigeon <jmp@safe.ca>>
 pkgname=vzgot
-pkgver=26.08.51
+pkgver=26.09.3
 pkgrel=0
 pkgdesc="Lightweight C-based container manager supervisor"
 url="https://github.com/jmrcpn/vzgot"
@@ -14,46 +14,47 @@ options="!check"
 subpackages="$pkgname-openrc $pkgname-sysv $pkgname-systemd"
 
 install="
-         $pkgname-openrc.post-install
-         $pkgname-openrc.post-upgrade
-	 $pkgname-openrc.post-deinstall
+	$pkgname-openrc.post-install
+	$pkgname-openrc.post-upgrade
+	$pkgname-openrc.post-deinstall
 	"
 
 source="$pkgname-$pkgver.tar.gz"
-builddir="$srcdir/$pkgname-$pkgver"
+#builddir="$srcdir/$pkgname-$pkgver"
 
 build() {
-    make prod
-}
+	make prod
+	}
 
 package() {
-    make DESTDIR="$pkgdir" install
-    # Installation du script OpenRC
-    install -m755 -D "$builddir"/alpine/init.d/vzgot "$pkgdir"/etc/init.d/vzgot
-}
+	make DESTDIR="$pkgdir" install
+	# Installation du script OpenRC
+	install -m755 -D "$builddir"/alpine/init.d/vzgotrc "$pkgdir"/etc/init.d/vzgot
+	}
 
 # Sous-paquet SysV / Init
 sysv() {
-    pkgdesc="SysV init script for vzgot"
-    depends="$pkgname=$pkgver-r$pkgrel"
-    
-    # Déplace le script de /etc/init.d dans le sous-paquet vzgot-sysv
-    amove etc/rc.d/init.d
-}
+	pkgdesc="SysV init script for vzgot"
+	depends="$pkgname=$pkgver-r$pkgrel"
+
+	mkdir -p "$subpkgdir"/etc/init.d
+	mv "$pkgdir"/etc/init.d/vzgot "$subpkgdir"/etc/init.d/vzgot
+	}
+
+openrc() {
+	pkgdesc="OpenRC init script for vzgot"
+	install_if="$pkgname=$pkgver-r$pkgrel openrc"
+
+	mkdir -p "$subpkgdir"/etc/init.d
+	mv "$pkgdir"/etc/init.d/vzgotrc "$subpkgdir"/etc/init.d/vzgot
+	}
 
 # Sous-paquet systemd
 systemd() {
-    pkgdesc="systemd service unit for vzgot"
-    depends="$pkgname=$pkgver-r$pkgrel"
-    
-    # Déplace le répertoire systemd dans le sous-paquet vzgot-systemd
-    amove usr/lib/systemd
-}
+	pkgdesc="systemd service unit for vzgot"
+	depends="$pkgname=$pkgver-r$pkgrel"
 
-openrc() {
-    pkgdesc="OpenRC init script for vzgot"
-    install_if="$pkgname=$pkgver-r$pkgrel openrc"
-
-    amove etc/init.d
-}
+	# Déplace le répertoire systemd dans le sous-paquet vzgot-systemd
+	amove usr/lib/systemd
+	}
 

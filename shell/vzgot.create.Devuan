@@ -85,7 +85,6 @@ if [ -n $LSTIP ] ; then
   echo "	iface eth0 inet static"
   echo "	address $ETH0"
   echo "	netmask 255.255.255.255"
-  echo "	pre-up iptables-restore < /etc/iptables/rules.v4"
   echo "	up ip route add 192.0.2.0/24 dev eth0 scope link"
   echo "	up ip route add default via 192.0.2.1 dev eth0"
   ) >> ${INTER}
