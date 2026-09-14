@@ -129,7 +129,7 @@ CFLAGS=								\
 	-I .							\
  	-DDIST_$(DIST)						\
 	-DUCD_COMPATIBLE					\
-	-DPUBLIC=''						\
+	-DPUBLIC=						\
 	-D_GNU_SOURCE						\
 	-fno-omit-frame-pointer					\
 	-fPIE							\

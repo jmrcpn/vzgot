@@ -2,7 +2,8 @@ Source: vzgot
 Section: admin
 Priority: optional
 Maintainer: Jean-Marc Pigeon <jmp@safe.ca> 
-Build-Depends: debhelper-compat (= 13), build-essential, libcap-dev
+#sudo apt install -y build-essential fakeroot devscripts lintian bc
+Build-Depends: debhelper-compat (= 13), libcap-dev
 Standards-Version: 4.6.2
 Homepage: https://github.com/jmrcpn/vzgot
 

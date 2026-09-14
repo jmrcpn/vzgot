@@ -1,4 +1,4 @@
-@@APPN@@ (@@VERSION@@) UNRELEASED; urgency=medium
+@@APPN@@ (@@VERSION@@.@@DIST_ID@@) UNRELEASED; urgency=medium
 
   * Automated build from spec-file infrastructure.
  -- @@PACKAGER@@  @@DATE@@

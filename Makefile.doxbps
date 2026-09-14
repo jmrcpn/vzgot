@@ -1,0 +1,61 @@
+#--------------------------------------------------------------------
+#Define ALL XBPS  packaging function
+#--------------------------------------------------------------------
+VOIDPACK=  ~/void-packages
+VOIPHOME=  $(VOIDPACK)/hostdir/binpkgs/
+XBPSVER	= $(VERSION).$(DIST_ID)_$(RELEASE).$$(uname -m).xbps
+
+#distribution using xbps
+void								\
+	:  xbpspack xbpstore xbpsinfo xbpclean
+
+
+xbpspack:  vztar
+	   @ mkdir -p						\
+		$(VOIDPACK)/hostdir/sources/$(APLR)		\
+		$(VOIDPACK)/srcpkgs/$(APPNAME)
+	   @ mv 						\
+		$(APPNAME)-$(VERSION)*.tar.gz 			\
+		$(VOIDPACK)/hostdir/sources/$(APLR)/
+	   @ cp -a						\
+		packagers/xbps/template				\
+		$(VOIDPACK)/srcpkgs/$(APPNAME)/
+	   @ ln -nsf						\
+		$(APPNAME)					\
+		$(VOIDPACK)/srcpkgs/$(APPNAME)-sysv
+	   @ (							\
+	     cd $(VOIDPACK);					\
+	     ./xbps-src -v clean $(APPNAME);			\
+	     ./xbps-src -v -A x86_64 -f pkg $(APPNAME);		\
+	     ./xbps-src -v -A x86_64-musl -f pkg $(APPNAME);	\
+	     echo "Doing xlint template";			\
+	     xlint srcpkgs/$(APPNAME)/template;			\
+	     echo "Packaging done";				\
+	     )
+
+
+xbpstore:
+	  @ rm -fr $(LOCREPO)
+	  @ mkdir -p $(LOCREPO)
+	  @ mv $(VOIPHOME)/$(APPNAME)*xbps $(LOCREPO)
+	  @ xbps-rindex -a $(LOCREPO)/*.x86_64.xbps;
+	  @ XBPS_TARGET_ARCH=x86_64-musl 			\
+		  xbps-rindex -a $(LOCREPO)/*.x86_64-musl.xbps;
+
+xbpsinfo:
+	  @ echo ""
+	  @ echo "============================================================="
+	  @ echo "  XBPS package creation successful!"
+	  @ echo ""
+	  @ echo "  To install VZGOT (sysV) :"
+	  @ echo "    sudo xbps-install -R $(LOCREPO)			    \\"
+	  @ echo "		$(APPNAME)				    \\"
+	  @ echo "		$(APPNAME)-sysv"
+	  @ echo ""
+	  @ echo "============================================================="
+
+xbpclean:	
+	   @ (							\
+	     cd $(VOIDPACK);					\
+	     ./xbps-src -v clean $(APPNAME);			\
+	     )

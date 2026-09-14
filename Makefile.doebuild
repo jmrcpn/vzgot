@@ -1,0 +1,69 @@
+#--------------------------------------------------------------------
+# Define ebuild packaging function (gentooe)
+#--------------------------------------------------------------------
+# To install needed components:
+# apk add alpine-sdk libcap-dev linux-headers
+# addgroup $(USER) abuild
+
+#Package abuild repository
+APKHOME	= $(HOME)/packages/$(shell basename $(CURDIR))/
+
+gentoo								\
+	: eblpack eblinfo
+
+eblpack	: vztar
+	  @ echo "Packaging $(APPNAME) for '$(DIST_ID)' distribution..."
+	  @ rm -fr $(DIST_ID)
+	  @ mkdir -p $(DIST_ID)/distfiles
+	  @ mkdir -p $(DIST_ID)/logs
+	  @ mkdir -p $(DIST_ID)/tmp
+	  @ mkdir -p $(DIST_ID)/metadata
+	  @ mkdir -p $(DIST_ID)/sys-apps/$(APPNAME)
+	  @ echo "masters = $(DIST_ID)" > $(DIST_ID)/metadata/layout.conf
+	  @ mv							\
+	  	$(APPNAME)-$(VERSION)*.tar.gz			\
+		$(DIST_ID)/distfiles/$(APPNAME)-$(VERSION).tar.gz
+	  @ cp -a						\
+	  	packagers/ebuild/$(APPNAME)-$(VERSION).ebuild	\
+		$(DIST_ID)/sys-apps/$(APPNAME)/
+	   (							\
+	     cd $(DIST_ID)/sys-apps/$(APPNAME);			\
+	     PORTAGE_TMPDIR=$(CURDIR)/$(DIST_ID)/tmp		\
+	     PORT_LOGDIR=$(CURDIR)/$(DIST_ID)/logs		\
+	     DISTDIR=$(CURDIR)/$(DIST_ID)/distfiles 		\
+	     PKGDIR=$(CURDIR)/$(DIST_ID)/binpkgs		\
+	     PORTAGE_USERNAME=$$(id -un)			\
+	     PORTAGE_GRPNAME=$$(id -gn)				\
+	     FEATURES="userpriv -sandbox -usersandbox -fakeroot"\
+	     ebuild $(APPNAME)-$(VERSION).ebuild		\
+	     	digest						\
+		compile						\
+		install						\
+		package;					\
+	     )
+	   @ rm -fr $(LOCREPO)
+	   @ mkdir -p $(LOCREPO)
+	   @ cp -a						\
+	       $(DIST_ID)/binpkgs/sys-apps/$(APPNAME)/*.gpkg.tar\
+	       $(LOCREPO)
+	   @ (							\
+	     cd $(LOCREPO);					\
+	     ln -nsf						\
+	       $(APPNAME)-$(VERSION)-1.gpkg.tar			\
+	       $(APPNAME)-$(VERSION).$(DIST_ID).gpkg.tar;	\
+	     )
+	   @ rm -fr $(DIST_ID)/
+
+eblinfo	:
+	  @ echo ""
+	  @ echo "================================================================="
+	  @ echo "  EBUILD package creation successful!"
+	  @ echo ""
+	  @ echo "  To install VZGOT :"
+	  @ echo "    sudo emerge  -K $(CURDIR)/$(LOCREPO)/$(APPNAME)-$(VERSION).gpkg.tar"
+	  @ echo ""
+	  @ # echo "emerge --unmerge sys-apps/$(APPNAME)"
+	  @ # echo "emerge -pC sys-apps/$(APPNAME)"
+	  @ echo "================================================================="
+
+

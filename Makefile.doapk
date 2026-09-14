@@ -1,0 +1,70 @@
+#--------------------------------------------------------------------
+# Define Alpine APK packaging function
+#--------------------------------------------------------------------
+# To install needed components:
+# apk add alpine-sdk libcap-dev linux-headers
+# addgroup $(USER) abuild
+
+#Package abuild repository
+APKHOME	= $(HOME)/packages/$(shell basename $(CURDIR))/
+
+alpine								\
+	: alppack alpcheck alpstore alpinfo
+	  @ rm -fr alpine/$(APPNAME)-$(VERSION)*.tar.gz
+
+alppack	: vztar
+	  @ echo "Packaging $(APPNAME) for '$(DIST_ID)' distribution..."
+	  @ echo ""
+	  @ rm -fr $(APKHOME)/
+	  @ mkdir -p alpine
+	  @ mv $(APPNAME)-$(VERSION)*.tar.gz alpine/$(APPNAME)-$(VERSION).tar.gz
+	  @ cp -a distributions/alpine/* alpine/
+	  @ cp -a packagers/APK/APKBUILD alpine/
+	  @ abuild -C alpine checksum	
+	  @ abuild -C alpine 
+	  @ cp -a 						\
+		alpine/$(APPNAME)-$(VERSION)*.tar.gz		\
+		$(APKHOME)/$$(uname -m)/
+
+alpcheck: vztar # to check APKBUILD conformance
+	  @ echo "Checking APBUILD file"
+	  @ apkbuild-lint alpine/APKBUILD
+	  @ echo "Completed APBUILD check"
+
+alpinfo	:
+	  @ echo ""
+	  @ echo "================================================================="
+	  @ echo "  APK package creation successful!"
+	  @ echo ""
+	  @ echo "  To install VZGOT (OpenRC) :"
+	  @ echo "    doas apk add $(LOCREPO)/$(APPNAME)-$(VERSION).$(DIST_ID)-r1.apk \\"
+	  @ echo "                 $(LOCREPO)/$(APPNAME)-openrc-$(VERSION).$(DIST_ID)-r1.apk"
+	  @ echo ""
+	  @ echo "  To install VZGOT (SysV init) :"
+	  @ echo "    doas apk add $(LOCREPO)/$(APPNAME)-$(VERSION).$(DIST_ID)-r1.apk \\"
+	  @ echo "                 $(LOCREPO)/$(APPNAME)-sysv-$(VERSION).$(DIST_ID)-r1.apk"
+	  @ echo "================================================================="
+
+
+alpstore:
+	  @ rm -fr $(LOCREPO)
+	  @ mkdir -p $(LOCREPO)
+	  @ mv $(APKHOME)/$$(uname -m)/$(APPNAME)* $(LOCREPO)
+	  @ (							\
+	    cd $(LOCREPO);					\
+	    for file in *;					\
+	      do						\
+	      if [ -f "$$file" ]; then				\
+		case "$$file" in 				\
+		  *"$(DIST_ID)"*	)			\
+		    ;;						\
+		  *"$(VERSION)"*	)			\
+		    newfile=$$(echo "$$file" |			\
+		     sed "s/$(VERSION)/$(VERSION).$(DIST_ID)/");\
+		    mv "$$file" "$$newfile"			\
+		    ;;						\
+		  esac;						\
+		fi;						\
+	      done;						\
+	      )
+

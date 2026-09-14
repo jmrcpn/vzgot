@@ -1,14 +1,14 @@
 #-----------------------------------------------------------------------------
-%{?!dist:	%define	dist	.dvl}
+%{?!dist:	%define	dist	@@DIST@@}
 %bcond_with	debug
 #-----------------------------------------------------------------------------
-Name		:	vzgot
-Version		:	26.09.3
-Release		:	0%{?dist}
+Name		:	@@APPN@@
+Version		:	@@VERSION@@
+Release		:	@@RELEASE@@%{?dist}
 Summary		:	An application to drive linux container
 Group		:	System Environment/Daemons
 
-Packager	:	Jean-Marc Pigeon <jmp@safe.ca>
+Packager	:	@@PACKAGER@@
 
 License		:	GPLv2+
 URL		:	https://github.com/jmrcpn/vzgot
@@ -69,6 +69,7 @@ long their kernel is a Linux one
 %{_prefix}/libexec/%{name}/utilities/tstavg
 %{_prefix}/libexec/%{name}/shell/%{name}.boot
 %{_prefix}/libexec/%{name}/shell/%{name}.boot.Alpine
+%{_prefix}/libexec/%{name}/shell/%{name}.boot.Centos
 %{_prefix}/libexec/%{name}/shell/%{name}.boot.Debian
 %{_prefix}/libexec/%{name}/shell/%{name}.boot.Devuan
 %{_prefix}/libexec/%{name}/shell/%{name}.boot.Fedora
@@ -80,6 +81,7 @@ long their kernel is a Linux one
 %{_prefix}/libexec/%{name}/shell/%{name}.build
 %{_prefix}/libexec/%{name}/shell/%{name}.create
 %{_prefix}/libexec/%{name}/shell/%{name}.create.Alpine
+%{_prefix}/libexec/%{name}/shell/%{name}.create.Centos
 %{_prefix}/libexec/%{name}/shell/%{name}.create.Debian
 %{_prefix}/libexec/%{name}/shell/%{name}.create.Devuan
 %{_prefix}/libexec/%{name}/shell/%{name}.create.Fedora
@@ -322,7 +324,6 @@ date > %{name}-%{version}-%{release}.build_date
 
 #-----------------------------------------------------------------------------
 %changelog
-* Mon Sep 07 2026 Jean-Marc Pigeon <jmp@safe.ca> - 26.09.3-0
-- Automatic build from Makefile.
+@@CHANGELOG@@
 
 #-----------------------------------------------------------------------------

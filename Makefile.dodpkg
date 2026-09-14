@@ -1,0 +1,55 @@
+#--------------------------------------------------------------------
+#Define ALL DPKG packaging function
+#--------------------------------------------------------------------
+#distribution using dbpkg
+debian								\
+devuan								\
+ubuntu								\
+	:  debclean debpack debcheck debstore debinfo
+
+#--------------------------------------------------------------------
+#To install needed components to be able to build vzgot
+#sudo apt install dpkg-dev build-essential devscripts 
+#vzgot dependency
+#sudo apt install libcap-dev
+DEBHOME = $(CURDIR)/$(APPNAME)_$(VERSION).$(DIST_ID)
+DEBARCH	= `dpkg --print-architecture`
+DEBVER	= $(VERSION).$(DIST_ID)
+
+debpack	: 
+	  @ echo "Packaging $(APPNAME) for '$(DIST_ID)' distribution..."
+	  @ echo ""
+	  @ dpkg-buildpackage -b -uc -us
+	  @ dpkg-source -b .
+
+debinfo	:
+	  @ echo "================================================================="
+	  @ echo "  Debian package creation successful!"
+	  @ echo "  Absolut path : $(APKHOME)"
+	  @ echo ""
+	  @ echo "  To install VZGOT (systemd) :"
+	  @ echo "    sudo dpkg -i  $(DEBHOME)/$(APPNAME)_$(DEBVER)_$(DEBARCH).deb \\"
+	  @ echo "		$(DEBHOME)/$(APPNAME)-systemd_$(DEBVER)_all.deb"
+	  @ echo ""
+	  @ echo "  To install VZGOT (OpenRC) :"
+	  @ echo "    sudo dpkg -i  $(DEBHOME)/$(APPNAME)_$(DEBVER)_$(DEBARCH).deb \\"
+	  @ echo "		$(DEBHOME)/$(APPNAME)-openrc_$(DEBVER)_all.deb"
+	  @ echo ""
+	  @ echo "  To install VZGOT (SysV init) :"
+	  @ echo "    sudo dpkg -i  $(DEBHOME)/$(APPNAME)_$(DEBVER)_$(DEBARCH).deb \\"
+	  @ echo "		$(DEBHOME)/$(APPNAME)-sysv_$(DEBVER)_all.deb"
+	  @ echo "================================================================"
+	  @ dh_clean
+
+debcheck:
+	  @ #lintian -L ">=error" ../*.changes
+	  @ echo "lintian checking..."
+	  @ lintian -v -i -I -E --pedantic  ../*.changes
+
+debclean:
+	  @ rm -fr ../*\.$(DIST_ID)* $(APPNAME)_$(DEBVER)
+
+debstore:
+	  @ mkdir -p $(APPNAME)_$(DEBVER)
+	  @ mv ../*\.$(DIST_ID)* $(APPNAME)_$(DEBVER)/
+

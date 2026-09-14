@@ -1,0 +1,63 @@
+# Template file for 'vzgot'
+pkgname=vzgot
+version=26.09.54.ok.26.08
+revision=1
+build_style=gnu-makefile
+
+#create_wrksrc=yes 
+#distfiles="vzgot-${version}.tar.gz"
+#checksum="05b9fca32282bc947dafa70d714f7e519ea0d337f7fccf1daefc73565c58ea90"
+
+make_build_target="prod"
+make_use_env=yes
+
+short_desc="Container engine designed for Linux system integration"
+maintainer="Jean-Marc Pigeon <jmp@safe.ca>"
+license="GPL-3.0-or-later"
+homepage="https://github.com/jmrcpn/vzgot"
+
+
+hostmakedepends="make gcc tar"
+makedepends="libcap-devel"
+depends="bird iproute2 sed"
+
+if [ "$XBPS_TARGET_LIBC" != "musl" ]; then
+	makedepends+=" libsanitizer-devel"
+	depends+=" libsanitizer"
+fi
+
+
+#create_wrksrc=yes
+#build_wrksrc="../../srcpkgs/vzgot/.."
+
+do_extract() {
+
+tar -xvf /host/sources/vzgot-${version}/vzgot-${version}.tar.gz -C ${XBPS_BUILDDIR}
+}
+
+do_install() {
+
+make DESTDIR="${DESTDIR}" install
+if [ -d "${DESTDIR}/usr/sbin" ]; then
+	vmkdir usr/bin
+	mv ${DESTDIR}/usr/sbin/* ${DESTDIR}/usr/bin/
+	rmdir ${DESTDIR}/usr/sbin
+	fi
+
+if [ -d "${DESTDIR}/etc/sysctl.d" ]; then
+	vmkdir usr/lib/sysctl.d
+	mv ${DESTDIR}/etc/sysctl.d/* ${DESTDIR}/usr/lib/sysctl.d/
+	rmdir ${DESTDIR}/etc/sysctl.d
+	fi
+}
+
+# sub-package SysV
+vzgot-sysv_package() {
+	short_desc="${short_desc} - SysV init script"
+# depends="${sourcepkg}>=${version}_${revision}"
+	pkg_install() {
+		vmove etc/init.d
+		vmove etc/sysconfig
+	}
+
+}

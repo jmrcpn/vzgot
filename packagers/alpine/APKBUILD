@@ -1,7 +1,7 @@
-#maintainer:	<Jean-Marc Pigeon <jmp@safe.ca>>
+#Maintainer: Jean-Marc Pigeon <jmp@safe.ca>
 pkgname=vzgot
-pkgver=26.09.3
-pkgrel=0
+pkgver=26.09.43
+pkgrel=1
 pkgdesc="Lightweight C-based container manager supervisor"
 url="https://github.com/jmrcpn/vzgot"
 arch="all"
@@ -11,7 +11,9 @@ depends="musl mount libc-utils bash net-tools bind-tools coreutils xz rsync ipro
 options="!check"
 
 # Sub packages
-subpackages="$pkgname-openrc $pkgname-sysv $pkgname-systemd"
+subpackages="$pkgname-openrc:openrc:noarch"
+subpackages="$subpackages $pkgname-sysv:sysv:noarch"
+subpackages="$subpackages $pkgname-systemd:systemd:noarch"
 
 install="
 	$pkgname-openrc.post-install
@@ -29,21 +31,22 @@ build() {
 package() {
 	make DESTDIR="$pkgdir" install
 	# Installation du script OpenRC
-	install -m755 -D "$builddir"/alpine/init.d/vzgotrc "$pkgdir"/etc/init.d/vzgot
 	}
 
 # Sous-paquet SysV / Init
 sysv() {
 	pkgdesc="SysV init script for vzgot"
 	depends="$pkgname=$pkgver-r$pkgrel"
+	subpkgarch="noarch"
 
 	mkdir -p "$subpkgdir"/etc/init.d
-	mv "$pkgdir"/etc/init.d/vzgot "$subpkgdir"/etc/init.d/vzgot
+	mv "$pkgdir"/etc/rc.d/init.d/vzgot "$subpkgdir"/etc/init.d/vzgot
 	}
 
 openrc() {
 	pkgdesc="OpenRC init script for vzgot"
 	install_if="$pkgname=$pkgver-r$pkgrel openrc"
+	subpkgarch="noarch"
 
 	mkdir -p "$subpkgdir"/etc/init.d
 	mv "$pkgdir"/etc/init.d/vzgotrc "$subpkgdir"/etc/init.d/vzgot
@@ -53,6 +56,7 @@ openrc() {
 systemd() {
 	pkgdesc="systemd service unit for vzgot"
 	depends="$pkgname=$pkgver-r$pkgrel"
+	subpkgarch="noarch"
 
 	# Déplace le répertoire systemd dans le sous-paquet vzgot-systemd
 	amove usr/lib/systemd

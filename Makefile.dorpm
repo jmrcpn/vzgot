@@ -1,39 +1,63 @@
 #--------------------------------------------------------------------
 #Define ALL RPM function
 #--------------------------------------------------------------------
-APLR	=  $(APPNAME)-$(VERSION)
-#--------------------------------------------------------------------
-dovzgot	:  dorpm
-	   @echo "======================================================================"
-	   @echo " RPM BUILD SUCCESSFUL"
-	   @echo "======================================================================"
-	   @echo " Your packages are available in:"
-	   @echo "    $(RPMDIR)/RPMS/{$$(uname -m),noarch}/"
-	   @echo ""
-	   @echo " To install vzgot, choose the package matching your init system:"
-	   @echo ""
-	   @echo " 1) systemd-based systems (Fedora, RHEL, Rocky, openSUSE):"
-	   @echo -e "sudo dnf install						\\"
-	   @echo -e "  $(RPMDIR)/RPMS/noarch/vzgot-systemd-$(VERSION)*.rpm \\"
-	   @echo -e "  $(RPMDIR)/RPMS/$$(uname -m)/vzgot-$(VERSION)-*.rpm"
-	   @echo ""
-	   @echo " 2) SysVinit-based system (Osukiss, etc.):"
-	   @echo "    sudo zypper install					\\"
-	   @echo "    $(RPMDIR)/RPMS/noarch/vzgot-sysv-$(VERSION)*.rpm		\\"
-	   @echo "    $(RPMDIR)/RPMS/$$(uname -m)/vzgot-$(VERSION)-*.rpm"
-	   @echo ""
-	   @echo " Note: Using 'dnf' (or zypper) is recommended to automatically"
-	   @echo "       resolve missing dependencies."
-	   @echo "======================================================================"
+RPMVER	= $(VERSION).$(DIST_ID)-$(RELEASE).$(DIST)
 
-dorpm	:  srcrpm
-	   @ echo "Building RPM"
+#--------------------------------------------------------------------
+fedora									\
+opensuse-tumbleweed							\
+osukiss									\
+	:  rpmpack rpmstore rpminfo
+
+
+rpmpack	:  srcrpm
+	   @ echo "Packaging $(APPNAME) for '$(DIST_ID)' distribution..."
+	   @ echo ""
 	   @ rpmbuild						\
 		--quiet						\
 		--define "_topdir $(RPMDIR)"			\
+		--define "dist .$(DIST)"			\
 		--rebuild					\
 		$(RPMDIR)/SRPMS/$(APPNAME)-$(VERSION)*.src.rpm
 	   @ echo "Build completed"
+
+rpminfo	:
+	  @ echo "================================================================="
+	  @ echo "  rpm package creation successful!"
+	  @ echo ""
+	  @ echo "  To install VZGOT (systemd) :"
+	  @ echo "    sudo rpm -Uhv  $(LOCREPO)/$(APPNAME)-$(RPMVER).$$(uname -m).rpm \\"
+	  @ echo "		$(LOCREPO)/$(APPNAME)-systemd_$(RPMVER).noarch.rpm"
+	  @ echo ""
+	  @ echo "  To install VZGOT (SysV init) :"
+	  @ echo "    sudo rpm -Uhv  $(LOCREPO)/$(APPNAME)-$(RPMVER).$$(uname -m).rpm \\"
+	  @ echo "		$(LOCREPO)/$(APPNAME)-sysv-$(RPMVER).noarch.rpm"
+	  @ echo "================================================================"
+
+rpmstore:
+	  @ rm -fr  $(LOCREPO)
+	  @ mkdir -p $(LOCREPO)
+	  @ mv 							\
+		  $(RPMDIR)/RPMS/noarch/vzgot*$(VERSION)*	\
+		  $(RPMDIR)/RPMS/$$(uname -m)/vzgot-$(VERSION)*	\
+		  $(LOCREPO)
+	  @ (							\
+	    cd $(LOCREPO);					\
+	    for file in *;					\
+	      do						\
+	      if [ -f "$$file" ]; then				\
+		case "$$file" in 				\
+		  *"$(DIST_ID)"*	)			\
+		    ;;						\
+		  *"$(VERSION)"*	)			\
+		    newfile=$$(echo "$$file" |			\
+		     sed "s/$(VERSION)/$(VERSION).$(DIST_ID)/");\
+		    mv "$$file" "$$newfile"			\
+		    ;;						\
+		  esac;						\
+		fi;						\
+	      done;						\
+	      )
 
 srcrpm	:  vztar
 	   @ echo "Making RPM src"
@@ -46,7 +70,7 @@ srcrpm	:  vztar
 		--quiet						\
 		--define "_topdir $(RPMDIR)"			\
 		-bs						\
-		$(APPNAME).spec 
+		packagers/rpm/spec 
 	   @ echo "RPM src completed"
 
 cleanbld:

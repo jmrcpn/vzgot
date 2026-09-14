@@ -96,6 +96,9 @@ case "${DISTRIB}" in
   "alpine"	)
     FLINUX="Alpine"	#Alpine family distribution
     ;;
+  "centos"	)
+    FLINUX="Centos"	#Centos family distribution
+    ;;
   "debian"	)
     FLINUX="Debian"	#Debian family distribution
     ;;
