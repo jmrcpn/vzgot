@@ -38,8 +38,6 @@ Requires	:	rsync
 Requires	:	sed
 Requires	:	util-linux
 
-BuildArch	:	x86_64
-
 %if 0%{?suse_version}
 Provides	:       procps-ng
 Requires	:       procps
@@ -157,7 +155,6 @@ Summary		:       %{name} configuration file for sysV
 
 #-----------------------------------------------------------------------------
 Requires	:	chkconfig
-Requires        :       lfs-bootscripts
 Requires        :       %{name} = %{version}-%{release}
 
 BuildArch	:	noarch
@@ -166,9 +163,6 @@ BuildArch	:	noarch
 %description            sysv
 This package allow to use vzgot on a simple sysv (sysvinit)
 linux system.
-
-#-----------------------------------------------------------------------------
-Requires	:	lsb
 
 #-----------------------------------------------------------------------------
 %files                  sysv

@@ -3,7 +3,7 @@
 %bcond_with	debug
 #-----------------------------------------------------------------------------
 Name		:	vzgot
-Version		:	26.09.55
+Version		:	26.09.56
 Release		:	1%{?dist}
 Summary		:	An application to drive linux container
 Group		:	System Environment/Daemons
@@ -37,8 +37,6 @@ Requires	:	procps-ng
 Requires	:	rsync
 Requires	:	sed
 Requires	:	util-linux
-
-BuildArch	:	x86_64
 
 %if 0%{?suse_version}
 Provides	:       procps-ng
@@ -157,7 +155,6 @@ Summary		:       %{name} configuration file for sysV
 
 #-----------------------------------------------------------------------------
 Requires	:	chkconfig
-Requires        :       lfs-bootscripts
 Requires        :       %{name} = %{version}-%{release}
 
 BuildArch	:	noarch
@@ -166,9 +163,6 @@ BuildArch	:	noarch
 %description            sysv
 This package allow to use vzgot on a simple sysv (sysvinit)
 linux system.
-
-#-----------------------------------------------------------------------------
-Requires	:	lsb
 
 #-----------------------------------------------------------------------------
 %files                  sysv
@@ -324,7 +318,7 @@ date > %{name}-%{version}-%{release}.build_date
 
 #-----------------------------------------------------------------------------
 %changelog
-* Mon Sep 14 2026 Jean-Marc Pigeon <jmp@safe.ca> - 26.09.55-1
+* Mon Sep 14 2026 Jean-Marc Pigeon <jmp@safe.ca> - 26.09.56-1
 - Automatic build from Makefile.
 
 #-----------------------------------------------------------------------------
