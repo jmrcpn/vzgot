@@ -3,14 +3,12 @@
 %bcond_with	debug
 #-----------------------------------------------------------------------------
 Name		:	vzgot
-Version		:	26.09.67
+Version		:	26.09.69
 Release		:	1%{?dist}
 Summary		:	An application to drive linux container
 Group		:	System Environment/Daemons
 
-Packager	:	Jean-Marc Pigeon <jmp@safe.ca>
-
-License		:	GPLv2+
+License		:	GPL-2.0-or-later
 URL		:	https://github.com/jmrcpn/vzgot
 
 Source0		:	https://github.com/jmrcpn/%{name}/archive/refs/tags/%{version}.tar.gz#/%{name}-%{version}.tar.gz
@@ -42,8 +40,8 @@ Requires	:	sed
 Requires	:	util-linux
 
 %if 0%{?suse_version}
-Provides	:       procps-ng
-Requires	:       procps
+Provides	:	procps-ng
+Requires	:	procps
 %endif
 
 #-----------------------------------------------------------------------------
@@ -132,7 +130,7 @@ if [ "$1" = 1 ]; then
  #extracting HOST nameserver to be used by container
  if [ -f /etc/resolv.conf ] ; then
    (						\
-   echo    "#Installation HOST: $HOSTNAME";	\
+   echo	"#Installation HOST: $HOSTNAME";	\
    echo -n "#Installation date: ";		\
    date	;					\
    head -1 %{_var}/lib/%{name}/etc/resolv.conf;	\
@@ -142,7 +140,7 @@ if [ "$1" = 1 ]; then
  #populating ssh default directory
  if [ -f /etc/*ssh/sshd_config ] ; then
    cp -a					\
-	/etc/*ssh/sshd_config	 		\
+	/etc/*ssh/sshd_config			\
 	/var/lib/%{name}/etc/ssh/server
    fi
  if [ -f ~/.ssh/authorized_keys ] ; then
@@ -154,11 +152,11 @@ if [ "$1" = 1 ]; then
 
 #=============================================================================
 %package		sysv
-Summary		:       %{name} configuration file for sysV
+Summary		:	%{name} configuration file for sysV
 
 #-----------------------------------------------------------------------------
 Requires	:	chkconfig
-Requires        :       %{name} = %{version}-%{release}
+Requires	:	%{name} = %{version}-%{release}
 
 BuildArch	:	noarch
 
@@ -190,10 +188,10 @@ if [ "$1" = 0 ]; then
 
 #=============================================================================
 %package		openrc
-Summary		:       OpenRC init script for %{name}
+Summary		:	OpenRC init script for %{name}
 
 #-----------------------------------------------------------------------------
-Requires        :       %{name} = %{version}-%{release}
+Requires	:	%{name} = %{version}-%{release}
 
 BuildArch	:	noarch
 
@@ -222,10 +220,10 @@ if [ "$1" = 0 ]; then
 
 #=============================================================================
 %package		systemd
-Summary		:       %{name} configuration file for systemd
+Summary		:	%{name} configuration file for systemd
 
 #-----------------------------------------------------------------------------
-Requires        :       %{name} = %{version}-%{release}
+Requires	:	%{name} = %{version}-%{release}
 
 BuildArch	:	noarch
 #-----------------------------------------------------------------------------
@@ -262,11 +260,10 @@ if [ "$1" = 0 ]; then
 
 #=============================================================================
 %package		apparmor
-Summary		:       %{name} configuration file to be used with apparmor
+Summary		:	%{name} configuration file to be used with apparmor
 
 #-----------------------------------------------------------------------------
-Requires        :       apparmor
-Requires        :       %{name} = %{version}-%{release}
+Requires	:	%{name} = %{version}-%{release}
 
 BuildArch	:	noarch
 
@@ -302,8 +299,7 @@ This package allow to have vzgot with apparmor facilities
 date > %{name}-%{version}-%{release}.build_date
 
 #-----------------------------------------------------------------------------
-%clean
-%{__rm} -rf %{buildroot}
+%check
 
 #-----------------------------------------------------------------------------
 #installing program
@@ -321,7 +317,7 @@ date > %{name}-%{version}-%{release}.build_date
 
 #-----------------------------------------------------------------------------
 %changelog
-* Tue Sep 15 2026 Jean-Marc Pigeon <jmp@safe.ca> - 26.09.67-1
+* Tue Sep 15 2026 Jean-Marc Pigeon <jmp@safe.ca> - 26.09.69-1
 - Automatic build from Makefile.
 
 #-----------------------------------------------------------------------------

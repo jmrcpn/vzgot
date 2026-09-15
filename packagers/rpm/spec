@@ -1,29 +1,28 @@
 #-----------------------------------------------------------------------------
-%{?!dist:	%define	dist	@@DIST@@}
+%{?!dist:	%define	dist	safe}
 %bcond_with	debug
 #-----------------------------------------------------------------------------
-Name		:	@@APPN@@
-Version		:	@@VERSION@@
-Release		:	@@RELEASE@@%{?dist}
+Name		:	vzgot
+Version		:	26.09.52
+Release		:	1%{?dist}
 Summary		:	An application to drive linux container
 Group		:	System Environment/Daemons
 
-License		:	GPL-2.0-or-later
+Packager	:	Jean-Marc Pigeon <jmp@safe.ca>
+
+License		:	GPLv2+
 URL		:	https://github.com/jmrcpn/vzgot
 
-Source0		:	https://github.com/jmrcpn/%{name}/archive/refs/tags/%{version}.tar.gz#/%{name}-%{version}.tar.gz
+Source0		:	%{name}-%{version}.tar.gz
 
 #-----------------------------------------------------------------------------
-BuildRequires	:	coreutils
 BuildRequires	:	gcc
-BuildRequires	:	glibc-static
-BuildRequires	:	glibc-devel
-BuildRequires	:	kernel-headers
-BuildRequires	:	libcap-devel
 BuildRequires	:	make
+BuildRequires	:	libcap-devel
+BuildRequires	:	kernel-headers
 
 %if %{with debug}
-BuildRequires	:	libasan-devel
+BuildRequires:  libasan-devel
 %endif
 
 Requires	:	bash
@@ -39,9 +38,11 @@ Requires	:	rsync
 Requires	:	sed
 Requires	:	util-linux
 
+BuildArch	:	x86_64
+
 %if 0%{?suse_version}
-Provides	:	procps-ng
-Requires	:	procps
+Provides	:       procps-ng
+Requires	:       procps
 %endif
 
 #-----------------------------------------------------------------------------
@@ -68,7 +69,6 @@ long their kernel is a Linux one
 %{_prefix}/libexec/%{name}/utilities/tstavg
 %{_prefix}/libexec/%{name}/shell/%{name}.boot
 %{_prefix}/libexec/%{name}/shell/%{name}.boot.Alpine
-%{_prefix}/libexec/%{name}/shell/%{name}.boot.Centos
 %{_prefix}/libexec/%{name}/shell/%{name}.boot.Debian
 %{_prefix}/libexec/%{name}/shell/%{name}.boot.Devuan
 %{_prefix}/libexec/%{name}/shell/%{name}.boot.Fedora
@@ -80,7 +80,6 @@ long their kernel is a Linux one
 %{_prefix}/libexec/%{name}/shell/%{name}.build
 %{_prefix}/libexec/%{name}/shell/%{name}.create
 %{_prefix}/libexec/%{name}/shell/%{name}.create.Alpine
-%{_prefix}/libexec/%{name}/shell/%{name}.create.Centos
 %{_prefix}/libexec/%{name}/shell/%{name}.create.Debian
 %{_prefix}/libexec/%{name}/shell/%{name}.create.Devuan
 %{_prefix}/libexec/%{name}/shell/%{name}.create.Fedora
@@ -130,7 +129,7 @@ if [ "$1" = 1 ]; then
  #extracting HOST nameserver to be used by container
  if [ -f /etc/resolv.conf ] ; then
    (						\
-   echo	"#Installation HOST: $HOSTNAME";	\
+   echo    "#Installation HOST: $HOSTNAME";	\
    echo -n "#Installation date: ";		\
    date	;					\
    head -1 %{_var}/lib/%{name}/etc/resolv.conf;	\
@@ -140,7 +139,7 @@ if [ "$1" = 1 ]; then
  #populating ssh default directory
  if [ -f /etc/*ssh/sshd_config ] ; then
    cp -a					\
-	/etc/*ssh/sshd_config			\
+	/etc/*ssh/sshd_config	 		\
 	/var/lib/%{name}/etc/ssh/server
    fi
  if [ -f ~/.ssh/authorized_keys ] ; then
@@ -152,11 +151,12 @@ if [ "$1" = 1 ]; then
 
 #=============================================================================
 %package		sysv
-Summary		:	%{name} configuration file for sysV
+Summary		:       %{name} configuration file for sysV
 
 #-----------------------------------------------------------------------------
 Requires	:	chkconfig
-Requires	:	%{name} = %{version}-%{release}
+Requires        :       lfs-bootscripts
+Requires        :       %{name} = %{version}-%{release}
 
 BuildArch	:	noarch
 
@@ -164,6 +164,9 @@ BuildArch	:	noarch
 %description            sysv
 This package allow to use vzgot on a simple sysv (sysvinit)
 linux system.
+
+#-----------------------------------------------------------------------------
+Requires	:	lsb
 
 #-----------------------------------------------------------------------------
 %files                  sysv
@@ -188,10 +191,10 @@ if [ "$1" = 0 ]; then
 
 #=============================================================================
 %package		openrc
-Summary		:	OpenRC init script for %{name}
+Summary		:       OpenRC init script for %{name}
 
 #-----------------------------------------------------------------------------
-Requires	:	%{name} = %{version}-%{release}
+Requires        :       %{name} = %{version}-%{release}
 
 BuildArch	:	noarch
 
@@ -220,10 +223,10 @@ if [ "$1" = 0 ]; then
 
 #=============================================================================
 %package		systemd
-Summary		:	%{name} configuration file for systemd
+Summary		:       %{name} configuration file for systemd
 
 #-----------------------------------------------------------------------------
-Requires	:	%{name} = %{version}-%{release}
+Requires        :       %{name} = %{version}-%{release}
 
 BuildArch	:	noarch
 #-----------------------------------------------------------------------------
@@ -260,10 +263,11 @@ if [ "$1" = 0 ]; then
 
 #=============================================================================
 %package		apparmor
-Summary		:	%{name} configuration file to be used with apparmor
+Summary		:       %{name} configuration file to be used with apparmor
 
 #-----------------------------------------------------------------------------
-Requires	:	%{name} = %{version}-%{release}
+Requires        :       apparmor
+Requires        :       %{name} = %{version}-%{release}
 
 BuildArch	:	noarch
 
@@ -299,7 +303,8 @@ This package allow to have vzgot with apparmor facilities
 date > %{name}-%{version}-%{release}.build_date
 
 #-----------------------------------------------------------------------------
-%check
+%clean
+%{__rm} -rf %{buildroot}
 
 #-----------------------------------------------------------------------------
 #installing program
@@ -317,6 +322,7 @@ date > %{name}-%{version}-%{release}.build_date
 
 #-----------------------------------------------------------------------------
 %changelog
-@@CHANGELOG@@
+* Mon Sep 14 2026 Jean-Marc Pigeon <jmp@safe.ca> - 26.09.52-1
+- Automatic build from Makefile.
 
 #-----------------------------------------------------------------------------
