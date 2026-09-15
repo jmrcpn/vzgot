@@ -31,13 +31,8 @@ This target installs the `vzgot` binary, default configuration files under `/etc
 For RedHat, Fedora, RHEL, CentOS, or SUSE-based systems, `vzgot` provides a dedicated target to build native RPM packages:
 
 ```bash
-# Generate, only, the RPM packages
-make dorpm
-
-# Install the generated RPM package better to use 'make dovzgot'
-# that command do all rpm file and tell you where (directories)
-# they are available.
-make dovzgot
+# Generate, the pacakeg according the distribution (alping, fedora, suse, etc...)
+make dopack
 
 sudo rpm -ivh vzgot-*.rpm
 # OR using dnf
