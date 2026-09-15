@@ -1,5 +1,10 @@
 # vzgot
 
+![COPR Build Status](https://copr.fedorainfracloud.org/coprs/jmrcpn/vzgot/package/vzgot/status_image/last_build.png)
+![Language](https://img.shields.io/badge/language-C-blue.svg)
+![License](https://img.shields.io/badge/license-GPLv3-green.svg)
+
+
 A lightweight, bare-metal-like system containerization 
 and supervisor utility written in pure C.
 
