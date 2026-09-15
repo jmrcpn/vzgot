@@ -17,12 +17,14 @@ Source0		:	https://github.com/jmrcpn/%{name}/archive/refs/tags/%{version}.tar.gz
 
 #-----------------------------------------------------------------------------
 BuildRequires	:	gcc
-BuildRequires	:	make
-BuildRequires	:	libcap-devel
+BuildRequires	:	glibc-static
+BuildRequires	:	glibc-devel
 BuildRequires	:	kernel-headers
+BuildRequires	:	libcap-devel
+BuildRequires	:	make
 
 %if %{with debug}
-BuildRequires:  libasan-devel
+BuildRequires	:	libasan-devel
 %endif
 
 Requires	:	bash
