@@ -70,7 +70,7 @@ srcrpm	:  vztar
 		--quiet						\
 		--define "_topdir $(RPMDIR)"			\
 		-bs						\
-		packagers/rpm/spec 
+		packagers/rpm/$(APPNAME).spec 
 	   @ echo "RPM src completed"
 
 cleanbld:

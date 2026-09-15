@@ -3,7 +3,7 @@
 %bcond_with	debug
 #-----------------------------------------------------------------------------
 Name		:	vzgot
-Version		:	26.09.33.osukiss
+Version		:	26.09.55
 Release		:	1%{?dist}
 Summary		:	An application to drive linux container
 Group		:	System Environment/Daemons
@@ -69,6 +69,7 @@ long their kernel is a Linux one
 %{_prefix}/libexec/%{name}/utilities/tstavg
 %{_prefix}/libexec/%{name}/shell/%{name}.boot
 %{_prefix}/libexec/%{name}/shell/%{name}.boot.Alpine
+%{_prefix}/libexec/%{name}/shell/%{name}.boot.Centos
 %{_prefix}/libexec/%{name}/shell/%{name}.boot.Debian
 %{_prefix}/libexec/%{name}/shell/%{name}.boot.Devuan
 %{_prefix}/libexec/%{name}/shell/%{name}.boot.Fedora
@@ -80,6 +81,7 @@ long their kernel is a Linux one
 %{_prefix}/libexec/%{name}/shell/%{name}.build
 %{_prefix}/libexec/%{name}/shell/%{name}.create
 %{_prefix}/libexec/%{name}/shell/%{name}.create.Alpine
+%{_prefix}/libexec/%{name}/shell/%{name}.create.Centos
 %{_prefix}/libexec/%{name}/shell/%{name}.create.Debian
 %{_prefix}/libexec/%{name}/shell/%{name}.create.Devuan
 %{_prefix}/libexec/%{name}/shell/%{name}.create.Fedora
@@ -322,7 +324,7 @@ date > %{name}-%{version}-%{release}.build_date
 
 #-----------------------------------------------------------------------------
 %changelog
-* Fri Sep 11 2026 Jean-Marc Pigeon <jmp@safe.ca> - 26.09.33-1
+* Mon Sep 14 2026 Jean-Marc Pigeon <jmp@safe.ca> - 26.09.55-1
 - Automatic build from Makefile.
 
 #-----------------------------------------------------------------------------
