@@ -1,6 +1,6 @@
 #Maintainer: Jean-Marc Pigeon <jmp@safe.ca>
 pkgname=vzgot
-pkgver=26.09.56
+pkgver=26.09.57
 pkgrel=1
 pkgdesc="Lightweight C-based container manager supervisor"
 url="https://github.com/jmrcpn/vzgot"

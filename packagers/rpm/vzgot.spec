@@ -3,7 +3,7 @@
 %bcond_with	debug
 #-----------------------------------------------------------------------------
 Name		:	vzgot
-Version		:	26.09.56
+Version		:	26.09.57
 Release		:	1%{?dist}
 Summary		:	An application to drive linux container
 Group		:	System Environment/Daemons
@@ -13,7 +13,7 @@ Packager	:	Jean-Marc Pigeon <jmp@safe.ca>
 License		:	GPLv2+
 URL		:	https://github.com/jmrcpn/vzgot
 
-Source0		:	%{name}-%{version}.tar.gz
+Source0		:	https://github.com/jmrcpn/%{name}/archive/refs/tags/%{version}.tar.gz#/%{name}-%{version}.tar.gz
 
 #-----------------------------------------------------------------------------
 BuildRequires	:	gcc
@@ -318,7 +318,7 @@ date > %{name}-%{version}-%{release}.build_date
 
 #-----------------------------------------------------------------------------
 %changelog
-* Mon Sep 14 2026 Jean-Marc Pigeon <jmp@safe.ca> - 26.09.56-1
+* Mon Sep 14 2026 Jean-Marc Pigeon <jmp@safe.ca> - 26.09.57-1
 - Automatic build from Makefile.
 
 #-----------------------------------------------------------------------------
