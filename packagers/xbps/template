@@ -1,6 +1,6 @@
 # Template file for 'vzgot'
 pkgname=vzgot
-version=26.09.57.ok.26.08
+version=26.09.58.ok.26.08
 revision=1
 build_style=gnu-makefile
 
