@@ -3,7 +3,7 @@
 %bcond_with	debug
 #-----------------------------------------------------------------------------
 Name		:	vzgot
-Version		:	26.09.59
+Version		:	26.09.60
 Release		:	1%{?dist}
 Summary		:	An application to drive linux container
 Group		:	System Environment/Daemons
@@ -16,6 +16,7 @@ URL		:	https://github.com/jmrcpn/vzgot
 Source0		:	https://github.com/jmrcpn/%{name}/archive/refs/tags/%{version}.tar.gz#/%{name}-%{version}.tar.gz
 
 #-----------------------------------------------------------------------------
+BuildRequires	:	coreutils
 BuildRequires	:	gcc
 BuildRequires	:	glibc-static
 BuildRequires	:	glibc-devel
@@ -320,7 +321,7 @@ date > %{name}-%{version}-%{release}.build_date
 
 #-----------------------------------------------------------------------------
 %changelog
-* Mon Sep 14 2026 Jean-Marc Pigeon <jmp@safe.ca> - 26.09.59-1
+* Mon Sep 14 2026 Jean-Marc Pigeon <jmp@safe.ca> - 26.09.60-1
 - Automatic build from Makefile.
 
 #-----------------------------------------------------------------------------
