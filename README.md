@@ -3,6 +3,7 @@
 ![COPR Build Status](https://copr.fedorainfracloud.org/coprs/jmrcpn/vzgot/package/vzgot/status_image/last_build.png)
 ![Language](https://img.shields.io/badge/language-C-blue.svg)
 ![License](https://img.shields.io/badge/license-GPLv3-green.svg)
+![Init Support](https://img.shields.io/badge/init-SysV%20%7C%20OpenRC%20%7C%20systemd-orange.svg)
 
 
 A lightweight, bare-metal-like system containerization 
