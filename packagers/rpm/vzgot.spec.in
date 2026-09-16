@@ -16,11 +16,14 @@ Source0		:	https://github.com/jmrcpn/%{name}/archive/refs/tags/%{version}.tar.gz
 #-----------------------------------------------------------------------------
 BuildRequires	:	coreutils
 BuildRequires	:	gcc
-BuildRequires	:	glibc-static
-BuildRequires	:	glibc-devel
 BuildRequires	:	kernel-headers
 BuildRequires	:	libcap-devel
 BuildRequires	:	make
+
+%if 0%{?fedora} || 0%{?rhel}
+BuildRequires	:	glibc-static
+BuildRequires	:	glibc-devel
+%endif
 
 %if %{with debug}
 BuildRequires	:	libasan-devel
@@ -38,6 +41,7 @@ Requires	:	procps-ng
 Requires	:	rsync
 Requires	:	sed
 Requires	:	util-linux
+
 
 %if 0%{?suse_version}
 Provides	:	procps-ng

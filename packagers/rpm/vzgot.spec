@@ -3,7 +3,7 @@
 %bcond_with	debug
 #-----------------------------------------------------------------------------
 Name		:	vzgot
-Version		:	26.09.69
+Version		:	26.09.76
 Release		:	1%{?dist}
 Summary		:	An application to drive linux container
 Group		:	System Environment/Daemons
@@ -16,11 +16,14 @@ Source0		:	https://github.com/jmrcpn/%{name}/archive/refs/tags/%{version}.tar.gz
 #-----------------------------------------------------------------------------
 BuildRequires	:	coreutils
 BuildRequires	:	gcc
-BuildRequires	:	glibc-static
-BuildRequires	:	glibc-devel
 BuildRequires	:	kernel-headers
 BuildRequires	:	libcap-devel
 BuildRequires	:	make
+
+%if 0%{?fedora} || 0%{?rhel}
+BuildRequires	:	glibc-static
+BuildRequires	:	glibc-devel
+%endif
 
 %if %{with debug}
 BuildRequires	:	libasan-devel
@@ -38,6 +41,7 @@ Requires	:	procps-ng
 Requires	:	rsync
 Requires	:	sed
 Requires	:	util-linux
+
 
 %if 0%{?suse_version}
 Provides	:	procps-ng
@@ -317,7 +321,7 @@ date > %{name}-%{version}-%{release}.build_date
 
 #-----------------------------------------------------------------------------
 %changelog
-* Tue Sep 15 2026 Jean-Marc Pigeon <jmp@safe.ca> - 26.09.69-1
+* Wed Sep 16 2026 Jean-Marc Pigeon <jmp@safe.ca> - 26.09.76-1
 - Automatic build from Makefile.
 
 #-----------------------------------------------------------------------------

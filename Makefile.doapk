@@ -20,8 +20,8 @@ alppack	: vztar
 	  @ mv $(APPNAME)-$(VERSION)*.tar.gz alpine/$(APPNAME)-$(VERSION).tar.gz
 	  @ cp -a distributions/alpine/* alpine/
 	  @ cp -a packagers/APK/APKBUILD alpine/
-	  @ abuild -C alpine checksum	
-	  @ abuild -C alpine 
+	  @ (cd alpine ; abuild checksum)
+	  @ (cd alpine ; abuild )
 	  @ cp -a 						\
 		alpine/$(APPNAME)-$(VERSION)*.tar.gz		\
 		$(APKHOME)/$$(uname -m)/
@@ -67,4 +67,5 @@ alpstore:
 		fi;						\
 	      done;						\
 	      )
+	  @ mv $(APKHOME)/$$(uname -m)/APKINDEX.tar.gz $(LOCREPO)
 

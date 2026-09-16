@@ -1,0 +1,3 @@
+#!/bin/sh
+# To activate vzgot at boot
+/sbin/rc-update add vzgot default
