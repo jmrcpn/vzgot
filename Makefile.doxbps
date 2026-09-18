@@ -2,7 +2,8 @@
 #Define ALL XBPS  packaging function
 #--------------------------------------------------------------------
 VOIDPACK=  ~/void-packages
-VOIPHOME=  $(VOIDPACK)/hostdir/binpkgs/
+VOIDHOME=  $(VOIDPACK)/hostdir/binpkgs/
+VOIDSRC	=  $(VOIDPACK)/hostdir/sources/
 XBPSVER	= $(VERSION).$(DIST_ID)_$(RELEASE).$$(uname -m).xbps
 
 #distribution using xbps
@@ -11,12 +12,13 @@ void								\
 
 
 xbpspack:  vztar
+	   @ rm -fr $(VOIDSRC)/$(APPNAME)*
 	   @ mkdir -p						\
-		$(VOIDPACK)/hostdir/sources/$(APLR)		\
+		$(VOIDSRC)/$(APLR)				\
 		$(VOIDPACK)/srcpkgs/$(APPNAME)
 	   @ mv 						\
-		$(APPNAME)-$(VERSION)*.tar.gz 			\
-		$(VOIDPACK)/hostdir/sources/$(APLR)/
+		$(APPNAME)-$(VERSION).tar.gz 			\
+		$(VOIDSRC)/$(APLR)/
 	   @ cp -a						\
 		packagers/xbps/template				\
 		$(VOIDPACK)/srcpkgs/$(APPNAME)/
@@ -37,7 +39,7 @@ xbpspack:  vztar
 xbpstore:
 	  @ rm -fr $(LOCREPO)
 	  @ mkdir -p $(LOCREPO)
-	  @ mv $(VOIPHOME)/$(APPNAME)*xbps $(LOCREPO)
+	  @ mv $(VOIDHOME)/$(APPNAME)*xbps $(LOCREPO)
 	  @ xbps-rindex -a $(LOCREPO)/*.x86_64.xbps;
 	  @ XBPS_TARGET_ARCH=x86_64-musl 			\
 		  xbps-rindex -a $(LOCREPO)/*.x86_64-musl.xbps;

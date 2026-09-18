@@ -15,7 +15,7 @@ vztar	:  doapl
 	   @ echo $(APLR).tar.gz ready
 
 doapl	:
-	   @ rm -fr $(APLR).tar.gz
+	   @ rm -fr $(APPNAME)-*.tar.gz
 	   @ mkdir -p						\
 		$(APLR)/apparmor				\
 		$(APLR)/conf					\

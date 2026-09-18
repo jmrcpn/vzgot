@@ -1,6 +1,6 @@
 #Maintainer: Jean-Marc Pigeon <jmp@safe.ca>
 pkgname=vzgot
-pkgver=26.09.76
+pkgver=26.09.84
 pkgrel=1
 pkgdesc="Lightweight C-based container manager supervisor"
 url="https://github.com/jmrcpn/vzgot"
@@ -21,7 +21,9 @@ install="
 	$pkgname-openrc.post-deinstall
 	"
 
-source="$pkgname-$pkgver.tar.gz"
+#source="$pkgname-$pkgver.tar.gz"
+source="$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/$pkgver.tar.gz"
+
 #builddir="$srcdir/$pkgname-$pkgver"
 
 build() {

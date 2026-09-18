@@ -21,7 +21,9 @@ install="
 	$pkgname-openrc.post-deinstall
 	"
 
-source="$pkgname-$pkgver.tar.gz"
+#source="$pkgname-$pkgver.tar.gz"
+source="$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/$pkgver.tar.gz"
+
 #builddir="$srcdir/$pkgname-$pkgver"
 
 build() {

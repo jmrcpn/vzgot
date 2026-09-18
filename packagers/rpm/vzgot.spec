@@ -3,7 +3,7 @@
 %bcond_with	debug
 #-----------------------------------------------------------------------------
 Name		:	vzgot
-Version		:	26.09.76
+Version		:	26.09.84
 Release		:	1%{?dist}
 Summary		:	An application to drive linux container
 Group		:	System Environment/Daemons
@@ -321,7 +321,7 @@ date > %{name}-%{version}-%{release}.build_date
 
 #-----------------------------------------------------------------------------
 %changelog
-* Wed Sep 16 2026 Jean-Marc Pigeon <jmp@safe.ca> - 26.09.76-1
+* Fri Sep 18 2026 Jean-Marc Pigeon <jmp@safe.ca> - 26.09.84-1
 - Automatic build from Makefile.
 
 #-----------------------------------------------------------------------------
