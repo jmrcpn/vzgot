@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #-------------------------------------------------------------------
 #procedure to duplicate critical container configuration file
 #within host sites_data

@@ -80,6 +80,7 @@
 #define	VZLIST	"vzgot.list"	/*container list*/
 #define	VZMOVE	"vzgot.movefrom"/*container move*/
 #define	VZUP	"vzgot.online"	/*container Up	*/
+#define	VZSLEEP	"vzgot.sleep"	/*  #   sleep   */
 #define	VZSTAND	"vzgot.standby"	/*  # 	backup	*/
 #define	VZRBLD	"vzgot.rebuild"	/*redo container*/
 #define VZSTAT  "vzstat"        //display container status
@@ -140,6 +141,8 @@ static void usage()
 (void) fprintf(stderr,"\t\t               freeze: Extract container critical configuration\n");
 (void) fprintf(stderr,"\t\t               movefrom: Move a running container from a remote Host and start it on the local Host\n");
 (void) fprintf(stderr,"\t\t               online [-r s]: List online containers uptime (refresh every 's' sec)\n");
+(void) fprintf(stderr,"\t\t               sleep: container go in sleep/freeze mode\n");
+(void) fprintf(stderr,"\t\tname         : Target container name\n");
 (void) fprintf(stderr,"\t\t               status [-r]: container status display (refresh every sec with -r)\n");
 (void) fprintf(stderr,"\t\tname         : Target container name\n");
 (void) fprintf(stderr,"\t\t[starter]    : Program to execute on boot (default: /bin/init)\n");
@@ -207,13 +210,13 @@ return status;
 /*	Procedure to do container monitoring    */
 /*						*/
 /************************************************/
-static _Bool monitoring(int mfd)
+static _Bool monitoring(int mfd,const char *contname)
 
 {
-#define OPEP    PRG":monitoring"
+#define OPEP            PRG":monitoring"
 
-
-static char *argv[]={"[vzgot]",(char *)0};
+static char mrk[200];
+static char *argv[]={mrk,(char *)0};
 static char *env[]={(char *)0};
 
 _Bool isok;
@@ -221,6 +224,7 @@ int fd;
 pid_t tracker;
 
 isok=false;
+(void) snprintf(mrk,sizeof(mrk),"[%s:%s]",VZGOT,contname);
 tracker=fork();
 switch (tracker) {
   case -1       :       //troouble trouble
@@ -232,14 +236,12 @@ switch (tracker) {
       (void) exit(EXIT_FAILURE);
       }
     if ((fd=open("/dev/console",O_WRONLY|O_CREAT,0600))>=0) {
-      //(void)dup2(fd,STDIN_FILENO);
       (void)dup2(fd,STDOUT_FILENO);
       (void)dup2(fd,STDERR_FILENO);
-      //if (fd>STDERR_FILENO)
       (void) close(fd);
       }
-    (void) prctl(PR_SET_NAME,"[vzgot]",0,0,0);
-    (void) prc_settitle("[vzgot]");
+    (void) prctl(PR_SET_NAME,mrk,0,0,0);
+    (void) prc_settitle(mrk);
     if (fexecve(mfd,argv,env)<0) {
       (void) log_alert(0,"%s, unable to exec vzmon from memory (error=<%s>)",
                             OPEP,strerror(errno));
@@ -423,7 +425,7 @@ while (proceed==true) {
       if (cntpid!=(pid_t)0) {	/*always	*/
         char *parms[]={
                         argv[0],
-                        "poweroff",
+                        "PATH=/sbin:/usr/sbin:/bin:/usr/bin poweroff",
                         (char *)0};
 
 	if ((status=vzexec((sizeof(parms)/sizeof(char *))-1,parms))!=0) {
@@ -987,7 +989,7 @@ while (proceed==true) {
       break;
     case 16     :       //executing the container monitoring
       (void) log_alert(1,"%s Step %2d: Start container monitoring...",CONT,phase);
-      if (monitoring(mfd)==false) {
+      if (monitoring(mfd,cont->contname)==false) {
         (void) log_alert(0,"%s Unable to start container monitoring",OPEP);
         goto TOOBAD;
         }
@@ -1658,6 +1660,7 @@ else {
 	a_list,		/*get container list		*/
 	a_movefrom,	/*move container from other host*/
 	a_online,	/*get container Up list		*/
+	a_sleep,	/*container temporary sleep mode*/
 	a_standby,	/*container backup		*/
 	a_status,	/*container status report	*/
 	a_rebuild,	/*rebuild container		*/
@@ -1679,6 +1682,7 @@ else {
 	{a_standby,	"standby",	(const void *)0},
 	{a_movefrom,	"movefrom",	(const void *)0},
 	{a_shutdown,	"shutdown",	(const void *)0},
+	{a_sleep,	"sleep",	(const void *)0},
 	{a_status,	"status",	(const void *)0},
 	{a_rebuild,	"rebuild",	(const void *)0},
 	{a_unknown,	(char *)0,	(const void *)0}
@@ -1731,6 +1735,9 @@ else {
         break;
       case a_online	:	
         status=vzscript(VZUP,argc-1,argv+1);
+        break;
+      case a_sleep	:	
+        status=vzscript(VZSLEEP,argc-1,argv+1);
         break;
       case a_standby	:	
         status=vzscript(VZSTAND,argc-1,argv+1);

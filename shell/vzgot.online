@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #----------------------------------------------------
 #shell used to list container actively online
 #$1 is an optional parameter to focus on a
@@ -9,9 +9,6 @@ CONFDIR=/etc/vzgot
 if [ -f $CONFDIR/vzgot_config ] ; then
   . $CONFDIR/vzgot_config
   fi
-
-#JMPDBG kludge for now
-NUMCPU=`getconf _NPROCESSORS_ONLN`
 
 #----------------------------------------------------
 #list a summary of all active (live) containers

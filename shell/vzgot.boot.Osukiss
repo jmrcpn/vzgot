@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #----------------------------------------------------
 #shell used to make sure container rootfs contents is 
 #container ready.

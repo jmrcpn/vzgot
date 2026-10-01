@@ -104,7 +104,9 @@ long their kernel is a Linux one
 %{_prefix}/libexec/%{name}/shell/%{name}.online
 %{_prefix}/libexec/%{name}/shell/%{name}.movefrom
 %{_prefix}/libexec/%{name}/shell/%{name}.rebuild
+%{_prefix}/libexec/%{name}/shell/%{name}.sleep
 %{_prefix}/libexec/%{name}/shell/%{name}.standby
+%{_prefix}/libexec/%{name}/shell/%{name}.tools
 %{_sysconfdir}/%{name}/distributions/
 %dir %{_sysconfdir}/%{name}/sites_data
 %dir %{_sysconfdir}/%{name}/names

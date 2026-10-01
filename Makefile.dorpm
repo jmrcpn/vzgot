@@ -27,7 +27,7 @@ rpminfo	:
 	  @ echo ""
 	  @ echo "  To install VZGOT (systemd) :"
 	  @ echo "    sudo rpm -Uhv  $(LOCREPO)/$(APPNAME)-$(RPMVER).$$(uname -m).rpm \\"
-	  @ echo "		$(LOCREPO)/$(APPNAME)-systemd_$(RPMVER).noarch.rpm"
+	  @ echo "		$(LOCREPO)/$(APPNAME)-systemd-$(RPMVER).noarch.rpm"
 	  @ echo ""
 	  @ echo "  To install VZGOT (SysV init) :"
 	  @ echo "    sudo rpm -Uhv  $(LOCREPO)/$(APPNAME)-$(RPMVER).$$(uname -m).rpm \\"

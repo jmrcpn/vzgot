@@ -43,7 +43,7 @@ SUBDIRS	=							\
 
 DIST_TAG= $(shell . /etc/os-release && echo $$ID)
 DIST_ID	= $(shell ./packagers/get_dist_id.sh)
-LOCREPO	=  ./$(APPNAME)_$(VERSION).$(DIST_TAG)
+LOCREPO	=  ${PWD}/$(APPNAME)_$(VERSION).$(DIST_TAG)
 APLR	=  $(APPNAME)-$(VERSION)
 #--------------------------------------------------------------------
 #Makefile sub-function

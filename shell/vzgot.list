@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #----------------------------------------------------
 #shell used to display the list of container
 #

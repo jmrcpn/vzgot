@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #echo -n "DEBUG PID=$$ Doing <$0>  " ; date
 #----------------------------------------------------
 #shell used to setup the host part (network, cgroup)

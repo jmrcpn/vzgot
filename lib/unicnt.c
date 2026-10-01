@@ -1418,7 +1418,7 @@ while (proceed==true) {
 	phase=999;	//trouble trouble
 	}
       break;
-    case 4	:	//reporting everython OK
+    case 4	:	//reporting everything is OK
       done=true;
       break;
     default	:	/*SAFE Guard		*/

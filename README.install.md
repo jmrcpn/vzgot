@@ -9,7 +9,6 @@ This document provides a step-by-step guide for installing the `vzgot` daemon on
 Before provisioning containers, you must install the `vzgot` daemon on the host server. Download and extract the latest release tarball from GitHub:
 
 ```bash
-wget https://github.com/your-repo/vzgot/releases/download/vX.Y.Z/vzgot-X.Y.Z.tar.gz
 tar -xzvf vzgot-X.Y.Z.tar.gz
 cd vzgot-X.Y.Z
 ```
@@ -27,7 +26,7 @@ This target installs the `vzgot` binary, default configuration files under `/etc
 
 ---
 
-### Method B: Building and Installing RPM Packages (`make dovzgot`)
+### Method B: Building and Installing RPM Packages 
 For RedHat, Fedora, RHEL, CentOS, or SUSE-based systems, `vzgot` provides a dedicated target to build native RPM packages:
 
 ```bash

@@ -3,7 +3,7 @@
 %bcond_with	debug
 #-----------------------------------------------------------------------------
 Name		:	vzgot
-Version		:	26.09.84
+Version		:	26.09.122
 Release		:	1%{?dist}
 Summary		:	An application to drive linux container
 Group		:	System Environment/Daemons
@@ -104,7 +104,9 @@ long their kernel is a Linux one
 %{_prefix}/libexec/%{name}/shell/%{name}.online
 %{_prefix}/libexec/%{name}/shell/%{name}.movefrom
 %{_prefix}/libexec/%{name}/shell/%{name}.rebuild
+%{_prefix}/libexec/%{name}/shell/%{name}.sleep
 %{_prefix}/libexec/%{name}/shell/%{name}.standby
+%{_prefix}/libexec/%{name}/shell/%{name}.tools
 %{_sysconfdir}/%{name}/distributions/
 %dir %{_sysconfdir}/%{name}/sites_data
 %dir %{_sysconfdir}/%{name}/names
@@ -321,7 +323,7 @@ date > %{name}-%{version}-%{release}.build_date
 
 #-----------------------------------------------------------------------------
 %changelog
-* Fri Sep 18 2026 Jean-Marc Pigeon <jmp@safe.ca> - 26.09.84-1
+* Wed Sep 30 2026 Jean-Marc Pigeon <jmp@safe.ca> - 26.09.122-1
 - Automatic build from Makefile.
 
 #-----------------------------------------------------------------------------

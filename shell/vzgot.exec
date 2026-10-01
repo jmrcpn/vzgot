@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #echo "DEBUG PID=$$ Doing <$0>"
 #----------------------------------------------------
 #shell used to execute a process within the
@@ -47,7 +47,6 @@ if [ -f $CONTDIR/vzgot_config ] ; then
 if [ -f ${HOMEFS}/rootfs/usr/bin/script ] ; then
   exec $NSENTER -t $VEPID -m -u -i -n -p /usr/bin/script -q -c "$*"
 else
-  exec $NSENTER -t $VEPID -m -u -i -n -p "$*"
+  exec $NSENTER -t $VEPID -m -u -i -n -p /bin/sh -c "$*"
 fi
-#$NSENTER -t $VEPID -m -u -i -n -p -T setsid -c "$*"
 #####################################################

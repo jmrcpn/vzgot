@@ -1,0 +1,227 @@
+#!/bin/bash
+#----------------------------------------------------
+#shell used to provide basic common tools to
+#other vzgot shell script
+#set it in standby mode
+#
+#-------------------------------------------------------------------
+CONFDIR=/etc/vzgot
+VZSPOOL=/var/spool/vzgot
+#-------------------------------------------------------------------
+#abort procedure
+abort ()
+
+{
+echo "Aborting! '$1'" > /dev/stderr
+exit 1;
+}
+
+#----------------------------------------------------
+#procedure to return the type of container device
+get_fstype()
+
+{
+local LMT=$1
+
+read -r fstype source target < 			\
+	<(findmnt -n -o FSTYPE,SOURCE,TARGET "/${LMT}" 2>/dev/null)
+case "$fstype" in
+  "zfs"		)
+    #nothing to do
+    ;;
+  "ext4"	)
+    fstype="";
+    if [[ "$source" =~ ^/dev/loop ]] ; then
+      fstype="loop-image"
+      fi
+    if [[ "$source" =~ ^/dev/mapper ]] ; then
+      fstype="lvm"
+      fi
+    ;;
+  *		)
+    fstype=""
+  esac
+echo $fstype;
+}
+
+
+#----------------------------------------------------
+#To create a local container file system
+#$1 is the container name
+#This function is aborting if not successful
+loc_create()
+
+{
+DATALOOP="\text4\tloop,defaults,nofail\t0 0"
+DATALVM="\text4\tdefaults\t0 0"
+CONT=$1;
+
+loc_destroy "${CONT}"
+case "${VZFS}" in
+  "ext4"	|			\
+  "loop-image"	)
+    mkdir -p ${VZDIR}/${CONT}
+    mkdir -p ${VZSPOOL}
+    rm -fr ${VZSPOOL}/${CONT}
+    fallocate -l ${VZFS_SIZE} ${VZSPOOL}/${CONT}
+    mke2fs -q -t ext4 -j -L${CONT} ${VZSPOOL}/${CONT}
+    echo -e "${VZSPOOL}/${CONT}\t${VZDIR}/${CONT}${DATALOOP}" >> /etc/fstab
+    if [ -x /usr/bin/systemctl ] ; then
+      systemctl daemon-reload
+      fi
+    mount ${VZSPOOL}/${CONT}
+    ret=$?
+    if [ $ret -ne 0 ]; then
+      abort "loc_create, unable to mount loop ${VZSPOOL}/${CONT}"
+      fi
+    ;;
+  "lvm"		)
+    mkdir -p ${VZDIR}/${CONT}
+    VZCONT=`echo ${CONT} | sed 's/\.//g' | sed 's/-//g'`
+    lvcreate -W y -y -L${VZFS_SIZE} -n${VZCONT} ${LVM} > /dev/null 2>&1
+    ret=$?
+    if [ $ret -ne 0 ]; then
+      abort "loc_create, unable to create LVM ${VZCONT} on volume ${LVM}"
+      fi
+    mke2fs -q -t ext4 -j -L${VZCONT} /dev/${LVM}/${VZCONT}
+    ret=$?
+    if [ $ret -ne 0 ]; then
+      abort "loc_create, unable to format LVM ${VZCONT} with mke2fs"
+      fi
+    echo -e "/dev/${LVM}/${CONT}\t${VZDIR}/${CONT}${DATALVM}" >> /etc/fstab
+    mount ${VZDIR}/${VZCONT}
+    ret=$?
+    if [ $ret -ne 0 ]; then
+      abort "loc_create, unable to mount LVM ${VZSPOOL}/${CONT}"
+      fi
+    ;;
+  "zfs"		)
+    if [ -z "${ZFSPOOL}" ] ; then
+      abort "loc_create, ZFSPOOL name is missing"
+      fi
+    zfs create                                          \
+      -o mountpoint=${VZDIR}/${CONT}                	\
+      -o quota=${VZFS_SIZE}                             \
+      ${ZFSPOOL}/${CONT}
+    ret=$?
+    if [ $ret -ne 0 ]; then
+      abort "loc_create, unable to mount ZFS ${VZSPOOL}/${CONT}"
+      fi
+    ;;
+  *		)
+    abort "loc_create, '${VZFS}' Unknown file system"
+    ;;
+  esac
+}
+
+#----------------------------------------------------
+#To destroy a local container file system
+#$1 is the container name
+loc_destroy()
+
+{
+CONT=$1;
+
+if [ -f ${CONFDIR}/names/${CONT} ] ; then
+  . ${CONFDIR}/names/${CONT}
+  if [ -z ${HOMEFS} ] ; then
+    abort "${CONT} missing HOMEFS within ${CONFDIR}/names/${CONT}"
+    fi
+  CONTFS=$(get_fstype "${HOMEFS}")
+  case "${CONTFS}" in
+    "ext4"	|				\
+    "loop-image"	)
+      sed -i -e"/${CONT}\t/d" /etc/fstab
+      if [ -x /usr/bin/systemctl ] ; then
+        systemctl daemon-reload
+        fi
+      umount ${VZDIR}/${CONT}
+      rm ${VZSPOOL}/${CONT}
+      rm -r ${VZDIR}/${CONT}
+      ret=$?
+      if [ $ret -ne 0 ]; then
+        echo -n "vzgot.tools, unable to delete '$VZFS' file "
+        abort "'${VZDIR}/${CONT}' with command rm"
+        fi
+      ;;
+  
+    "lvm"		)
+      umount ${HOMEFS} 
+      sed -i -e"/${CONT}\t/d" /etc/fstab
+      lvremove -f /dev/${LVM}/${CONT} > /dev/null 2>&1
+      ret=$?
+      if [ $ret -ne 0 ]; then
+        echo -n "loc_destroy, unable to delete LVM file "
+        abort    "'/dev/${LVM}/${CONT}' with command lvremove"
+        fi
+      rmdir ${HOMEFS}
+      ;;
+  
+    "zfs"		)
+      zfs destroy ${ZFSPOOL}/${CONT}
+      ret=$?
+      if [ $ret -ne 0 ]; then
+        echo -n "vzgot.destroy, unable to destroy "
+        abort    "ZFS ${ZFSPOOL}/${CONT} using 'zfs destroy'"
+        fi
+      rmdir ${HOMEFS}
+      ;;
+    ""		)
+        #No container defined
+      ;;
+    *		)
+      abort "'${CONTFS}' Unknown file system"
+      ;;
+    esac
+  sed -i -e "s/^ONBOOT=.*$/ONBOOT=\"Destroyed\"/g" ${CONFDIR}/names/${CONT}
+  fi
+}
+
+#----------------------------------------------------
+#To request remote container file system snapshot
+#$1 is the remote Host name
+#$2 is the container name
+rem_snapshot()
+
+{
+ISOK="1":
+BINOME=$1
+CONT=$2;
+
+FSTYPE=`ssh ${BINOME} "findmnt -n -o FSTYPE,TARGET|grep ${CONT}$|cut -d' ' -f1"`
+case "${FSTYPE}" in
+  "ext4"		|		\
+  "loop-image"		)
+    ISOK="0";
+    echo "'${FSTYPE}' rem_snapshot, Not yet implemented"
+    ;;
+  "zfs"			)
+    ssh ${BINOME} "zfs snapshot ${RPOOL}@${SNAP};			\
+	           mkdir -p /vzgot/snapshot/${SNAP}_${NAME}"
+    ;;
+  "lvm"			)
+    ISOK="0";
+    echo "'${FSTYPE}' rem_snapshot, Not yet implemented"
+    ;;
+  esac
+
+echo ${ISOK}
+}
+
+#----------------------------------------------------
+if ! [ -f ${CONFDIR}/vzgot_config ] ; then
+  abort "Missing vzgot config file"
+  fi
+. ${CONFDIR}/vzgot_config
+
+#specific container configuration override (if needed)
+if [ -f ${VZDIR}/${CONTNAME}/vzgot_config ] ; then
+  ${VZDIR}/${CONTNAME}/vzgot_config
+  fi
+
+#----------------------------------------------------
+#do wee have the file system size
+if [ -z "$VZFS_SIZE" ] ; then
+  VZFS_SIZE="2G"
+  fi
+#----------------------------------------------------

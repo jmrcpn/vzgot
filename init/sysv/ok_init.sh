@@ -70,6 +70,8 @@ vzgotstart()
 count=0
 for cont in `ls $CONFDIR/names`
   do
+  HOMEFS=""
+  ONBOOT=""
   . $CONFDIR/names/$cont
   onboot=`echo $ONBOOT | tr [:upper:] [:lower:]`
   if [ "$onboot" != "yes" ] ; then
@@ -125,6 +127,7 @@ for cont in ${tostop}
     fi
   done
 log_status "Stopping all ${count} containers ASAP" 0
+t=0
 while [ "$t" -lt "$MAXT" ]; 
   do
   remain=0;
@@ -188,6 +191,9 @@ case "$1" in
   stop		)
 	# Stopping daemons.
 	vzgotstop;
+	if [ -d "${VZGROUP}" ]; then
+    	  rmdir "${VZGROUP}" 2>/dev/null || true
+	  fi
 	ret=$?;
 	;;
 
@@ -205,7 +211,8 @@ case "$1" in
 	;;
 
   status	)
-	status $PROG
+	count=$(vzgot online 2>/dev/null | grep -c .)
+	log_status "vzgot: ${count} container(s) online" 
 	;;
   *		)
 	echo "Usage: vzgot {start|stop|restart|reload|force-reload|status}"

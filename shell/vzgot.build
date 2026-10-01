@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/bash
 #----------------------------------------------------
 #shell used to build the root file system for the
 #container, incoming file is a tar file to
@@ -17,83 +17,22 @@ TARFILE=$2
 DIST=$3
 ARCH=$4
 
-#-------------------------------------------------------------------
-#abort procedure
-abort ()
 
-{
-echo "$1"
-exit 1;
-}
+#adding vzgot tools
+. `dirname $0`/vzgot.tools
 
 #----------------------------------------------------
-if ! [ -f /etc/vzgot/vzgot_config ] ; then
-  abort "Missing vzgot config file"
-  fi
-. /etc/vzgot/vzgot_config
-
-#specific container configuration override (if needed)
-if [ -f $VZDIR/$CONTNAME/vzgot_config ] ; then
-  $VZDIR/$CONTNAME/vzgot_config
-  fi
-#----------------------------------------------------
-if [ -d $VZDIR/$CONTNAME ] ; then
-  echo "Container $CONTNAME already existing, must be destroyed first"
-  abort "Use command \"vzgot destroy $CONTNAME\" to do it"
+if [ -d ${VZDIR}/${CONTNAME} ] ; then
+  echo "Container ${CONTNAME} already existing, must be destroyed first"
+  abort "Use command \"vzgot destroy ${CONTNAME}\" to do it"
   fi
 
 #----------------------------------------------------
 #creating Container directory
-if [ -z "$VZFS_SIZE" ] ; then
+if [ -z "${VZFS_SIZE}" ] ; then
   VZFS_SIZE="2G"
   fi
-VZSPOOL=/var/spool/vzgot
-case "$VZFS" in
-  "ext4"	|				\
-  "loop-image"	)
-    mkdir -p $VZDIR/$CONTNAME
-    mkdir -p $VZSPOOL
-    rm -fr $VZSPOOL/$CONTNAME
-    fallocate -l $VZFS_SIZE $VZSPOOL/$CONTNAME
-    mke2fs -q -t ext4 -j -L$CONTNAME $VZSPOOL/$CONTNAME
-    echo -e "$VZSPOOL/$CONTNAME\t$VZDIR/$CONTNAME\text4\tloop,defaults,nofail\t0 0" \
-	     >> /etc/fstab
-    if [ -x /usr/bin/systemctl ] ; then
-      systemctl daemon-reload
-      fi
-    mount $VZSPOOL/$CONTNAME
-    ;;
-  "lvm"		)
-    mkdir -p $VZDIR/$CONTNAME
-    VZCONTNAME=`echo $CONTNAME | sed 's/\.//g' | sed 's/-//g'`
-    lvcreate -L$VZFS_SIZE -n$VZCONTNAME $VZSPOOL > /dev/null 2>&1
-    ret=$?
-    if [ $ret -ne 0 ]; then
-      abort "vzgot.build, unable to create LVM $VZCONTNAME on volume $LVM"
-      fi
-    mke2fs -q -t ext4 -j -L$VZCONTNAME /dev/$LVM/$VZCONTNAME
-    ret=$?
-    if [ $ret -ne 0 ]; then
-      abort "vzgot.build, unable to format LVM $VZCONTNAME with mke2fs"
-      fi
-    echo -e "$VZSPOOL/$VZCONTNAME\t$VZDIR/$CONTNAME\text4\tdefaults\t0 0" \
-	    >> /etc/fstab
-    mount $VZSPOOL/$VZCONTNAME
-    ;;
-  #container within a dedicated ZFS file system
-  "zfs"		)
-    if [ -z "$ZFSPOOL" ] ; then
-      ZFSPOOL="tank"
-      fi
-    zfs create 						\
-      -o mountpoint=$VZDIR/$CONTNAME			\
-      -o quota=$VZFS_SIZE				\
-      $ZFSPOOL/$CONTNAME
-    ;;
-  *		)
-    abort "Missing the VZFS variable within config (Bug?)"
-    ;;
-  esac
+loc_create "${CONTNAME}"
 
 CONTDIR=${VZDIR}/${CONTNAME}
 VZROOT=${CONTDIR}/rootfs

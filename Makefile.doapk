@@ -16,14 +16,17 @@ alppack	: vztar
 	  @ echo "Packaging $(APPNAME) for '$(DIST_ID)' distribution..."
 	  @ echo ""
 	  @ rm -fr alpine
+	  @ rm -fr /var/cache/distfiles/$(APPNAME)*.tar.gz
 	  @ mkdir -p alpine
 	  @ cp -a distributions/alpine/* alpine/
 	  @ cp -a packagers/APK/APKBUILD alpine/
 	  @ echo "sha512sums=\"" >> alpine/APKBUILD
 	  @ sha512sum $(APPNAME)-$(VERSION).tar.gz >> alpine/APKBUILD
 	  @ echo "\"" >> alpine/APKBUILD
+	  @ cp -a $(APPNAME)-$(VERSION).tar.gz /var/cache/distfiles/
 	  @ mv $(APPNAME)-$(VERSION).tar.gz alpine/$(APPNAME)-$(VERSION).tar.gz
-	  @ (cd alpine ; SRCDEST=. abuild )
+	  @ # (cd alpine ; SRCDEST=$(pwd) abuild verify unpack prepare build rootpkg)
+	  @ (cd alpine ; SRCDEST=$(pwd) abuild)
 	  @ cp -a 						\
 		alpine/$(APPNAME)-$(VERSION)*.tar.gz		\
 		$(APKHOME)/$$(uname -m)/

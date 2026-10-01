@@ -1,0 +1,63 @@
+#!/bin/bash
+#
+# vzgot-sleep - Temporarily freeze a vzgot container for a specified duration
+# Usage: vzgot-sleep <container_name> [duration_seconds]
+#
+
+set -euo pipefail
+
+# 1. Argument parsing and default values
+CONT="${1:-}"
+DURATION="${2:-10}"
+
+if [ -z "${CONT}" ]; then
+  echo "Error: Container name is required." >&2
+  echo "Usage: $0 <container_name> [duration_seconds]" >&2
+  exit 1
+  fi
+
+# Ensure duration is a positive integer
+if ! [[ "${DURATION}" =~ ^[0-9]+$ ]]; then
+  echo "Error: Duration must be a positive integer (in seconds)." >&2
+  exit 1
+  fi
+
+FREEZE_FILE="/sys/fs/cgroup/vzgot/containers/${CONT}/cgroup.freeze"
+
+# 2. Check cgroup hierarchy existence
+if [ ! -f "${FREEZE_FILE}" ]; then
+  echo "Error: cgroup for container '${CONT}' not found or inactive (${FREEZE_FILE})." >&2
+  exit 1
+  fi
+
+# 3. Safe thawing helper function
+thaw_container()
+
+{
+if [ -f "${FREEZE_FILE}" ]; then
+  echo 0 > "${FREEZE_FILE}" 2>/dev/null || true
+  fi
+}
+
+# 4. Background timer task execution
+(
+# Trap termination signals to ensure container is always thawed on exit
+trap thaw_container EXIT INT TERM HUP
+
+# Freeze container
+echo 1 > "${FREEZE_FILE}"
+
+#make sur system file are syncronized
+sync
+
+# Wait for specified duration
+sleep "${DURATION}"
+
+# Container will be automatically thawed via the EXIT trap when script ends
+) &>/dev/null &
+
+# Detach subshell process to immediately release the calling terminal/script
+disown $!
+
+echo "Container '${CONT}' frozen for ${DURATION} second(s) (running in background)."
+exit 0

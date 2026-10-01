@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #-------------------------------------------------------------------
 #procedure to move a vzgot container from one remote server to the
 #local server
@@ -21,33 +21,28 @@ if [ -n "$ONLINE" ] ; then
   echo "$2 already running on local HOST, aborting move at once!"
   exit 3
   fi
+vzgot standby $1 $2 ${ONBOOT}
 ONLINE=`ssh $1 "vzgot online | grep ^$2"`
-if [ -n "$ONLINE" ] ; then
+if [ -n "${ONLINE}" ] ; then
   ONBOOT="yes"
-  echo "Container $2 is online, lets update it first"
-  vzgot standby $1 $2
-  ssh $1 "sed -i 				\
-	  -e'/^ONBOOT/s:=.*$:=\"No\":'		\
-	  /etc/vzgot/names/$2"
-  ssh $1 "vzgot shutdown $2"
+  echo "Container $2 is online, Making sure it is properly updated"
+  vzgot standby $1 $2 ${ONBOOT}
   if [ $? -ne 0 ] ; then
-    echo "Trouble to shutdown remote $2, exiting at once!"
-    exit 3
+    echo "Trouble to duplicate remote $2, on local server! Exiting at once"
+    exit 4
     fi
+  ssh $1 "sed -i 					\
+	  -e'/^ONBOOT/s:=.*$:=\"No\":'			\
+	  /etc/vzgot/names/$2"
   fi
-echo "Doing last standby duplication of $2"
-vzgot standby $1 $2
-if [ $? -ne 0 ] ; then
-  echo "Trouble to duplicate remote $2, on local server! Exiting at once"
-  exit 4
-  fi
-#setting local server as bootable
-sed -i 							\
-  -e"s:ONBOOT=\"Standby\":ONBOOT=\"$ONBOOT\":"	\
-  /etc/vzgot/names/$2
 #starting server on local HOST
-if [ "$ONBOOT" = "yes" ] ; then
+if [ "${ONBOOT}" = "yes" ] ; then
+  echo "Booting container '$2'"
   vzgot boot $2
+  #setting local server as bootable
+  sed -i 						\
+	  -e"/^ONBOOT/s:=.*$:=\"${ONBOOT}\":"		\
+	  /etc/vzgot/names/$2
   fi
 }
 #-------------------------------------------------------------------
