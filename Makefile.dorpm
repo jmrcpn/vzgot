@@ -5,6 +5,7 @@ RPMVER	= $(VERSION).$(DIST_ID)-$(RELEASE).$(DIST)
 
 #--------------------------------------------------------------------
 fedora									\
+mageia									\
 opensuse-tumbleweed							\
 osukiss									\
 	:  rpmpack rpmstore rpminfo

@@ -144,6 +144,9 @@ else
     "gentoo"	)
       FLINUX="Gentoo"	#Gentoo family distribution
       ;;
+    "mageia"	)
+      FLINUX="Mageia"	#mageia distribution
+      ;;
     "ok-1"	)
       FLINUX="Osukiss"	#Osukiss family distribution
       ;;

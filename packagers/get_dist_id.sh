@@ -23,6 +23,9 @@ if [ -f /etc/os-release ]; then
     "gentoo"			)
       DIST_ID="gentoo"
       ;;
+    "mageia"			)
+      DIST_ID="mageia-${VERSION_ID}"
+      ;;
     "opensuse-tumbleweed"	)
       DIST_ID="tw${VERSION_ID}"
       ;;

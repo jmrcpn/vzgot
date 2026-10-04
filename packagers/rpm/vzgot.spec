@@ -3,7 +3,7 @@
 %bcond_with	debug
 #-----------------------------------------------------------------------------
 Name		:	vzgot
-Version		:	26.10.4
+Version		:	26.10.8
 Release		:	1%{?dist}
 Summary		:	An application to drive linux container
 Group		:	System Environment/Daemons
@@ -20,9 +20,13 @@ BuildRequires	:	kernel-headers
 BuildRequires	:	libcap-devel
 BuildRequires	:	make
 
-%if 0%{?fedora} || 0%{?rhel}
+%if 0%{?fedora} || 0%{?rhel} || 0%{?suse_version}
 BuildRequires	:	glibc-static
 BuildRequires	:	glibc-devel
+%endif
+
+%if 0%{?mageia}
+BuildRequires	:	glibc-static-devel
 %endif
 
 %if %{with debug}
@@ -77,6 +81,7 @@ long their kernel is a Linux one
 %{_prefix}/libexec/%{name}/shell/%{name}.boot.Devuan
 %{_prefix}/libexec/%{name}/shell/%{name}.boot.Fedora
 %{_prefix}/libexec/%{name}/shell/%{name}.boot.Gentoo
+%{_prefix}/libexec/%{name}/shell/%{name}.boot.Mageia
 %{_prefix}/libexec/%{name}/shell/%{name}.boot.Opensuse
 %{_prefix}/libexec/%{name}/shell/%{name}.boot.Osukiss
 %{_prefix}/libexec/%{name}/shell/%{name}.boot.Ubuntu
@@ -89,6 +94,7 @@ long their kernel is a Linux one
 %{_prefix}/libexec/%{name}/shell/%{name}.create.Devuan
 %{_prefix}/libexec/%{name}/shell/%{name}.create.Fedora
 %{_prefix}/libexec/%{name}/shell/%{name}.create.Gentoo
+%{_prefix}/libexec/%{name}/shell/%{name}.create.Mageia
 %{_prefix}/libexec/%{name}/shell/%{name}.create.Opensuse
 %{_prefix}/libexec/%{name}/shell/%{name}.create.Osukiss
 %{_prefix}/libexec/%{name}/shell/%{name}.create.Ubuntu
@@ -323,7 +329,7 @@ date > %{name}-%{version}-%{release}.build_date
 
 #-----------------------------------------------------------------------------
 %changelog
-* Sun Oct 04 2026 Jean-Marc Pigeon <jmp@safe.ca> - 26.10.4-1
+* Sun Oct 04 2026 Jean-Marc Pigeon <jmp@safe.ca> - 26.10.8-1
 - Automatic build from Makefile.
 
 #-----------------------------------------------------------------------------

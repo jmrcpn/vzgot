@@ -111,6 +111,9 @@ case "${DISTRIB}" in
   "gentoo"	)
     FLINUX="Gentoo"	#Gentoo family distribution
     ;;
+  "mageia"	)
+    FLINUX="Mageia"	#Mageia family distribution
+    ;;
   "ok-1"	)
     FLINUX="Osukiss"	#Osukiss family distribution
     ;;
