@@ -717,7 +717,7 @@ return nbr;
 */
 /************************************************/
 /*						*/
-/*	Procedure to retreive the host official	*/
+/*	Procedure to retrieve the host official	*/
 /*	loadavg.				*/
 /*						*/
 /************************************************/
@@ -759,8 +759,8 @@ while (proceed==true) {
 	}
       (void) fclose(fichier);
       break;
-    case 2	:	//scaning data
-      isok=true;	//assum the best
+    case 2	:	//scanning data
+      isok=true;	//lets hope for the best
       if ((sscanf(data,"%lf %lf %lf",avg60,avg300,avg900))!=3) {
 	(void) log_alert(0,"%s Unable to scan data <%s> (Bug?)",OPEP,data);
 	isok=false;	//best is not always true

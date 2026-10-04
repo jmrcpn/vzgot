@@ -43,9 +43,6 @@
 
 extern	_Bool	privileged;	//Container is working in privileged mode
 
-//procedure to compute container own load average
-extern const char *cal_loadavg(const char *contname,uint16_t nbr_cpu,double delta_t);
-
 //procedure to assign a 'working root user' to container
 extern _Bool cnt_mapcontids(pid_t clonepid,uid_t contuid,gid_t contgid);
 

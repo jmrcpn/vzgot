@@ -2921,7 +2921,7 @@ while (proceed==true) {
     case 5	:	//applying ratio
       for (int i=0;i<sizeof(host_avg)/sizeof(double);i++)
         host_avg[i]*=ratio;
-      (void) snprintf(loadavg,sizeof(loadavg),"%5.2lf %5.2lf %5.2lf 1/%-4u %-4u",
+      (void) snprintf(loadavg,sizeof(loadavg),"%6.2lf %6.2lf %6.2lf 1/%-5u %-7u",
                                                host_avg[0],
                                                host_avg[1],
                                                host_avg[2],

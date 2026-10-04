@@ -254,7 +254,7 @@ return isok;
 /************************************************/
 /*						*/
 /*	procedure to feed the load average to	*/
-/*	container speciel feed file		*/
+/*	container special feed file		*/
 /*	/etc/vzgot/loadavg			*/
 /*						*/
 /************************************************/
