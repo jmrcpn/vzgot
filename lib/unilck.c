@@ -181,14 +181,16 @@ while (proceed==true) {
 	break;		
 	}
       while (tentative>0) {
-        FILE *fichier;
-	
-        if ((fichier=fopen(lockname,"r"))==(FILE *)0)
+        int fd;
+
+        if ((fd=open(lockname,O_RDONLY|O_NOFOLLOW|O_CLOEXEC))<0)
 	  break;	//lock file now missing, lets continue
 	else {
           int pid;
+          FILE *fichier;
           char strloc[80];
 
+          fichier=fdopen(fd,"r");
 	  (void) memset(strloc,'\000',sizeof(strloc)); 
 	  if (fgets(strloc,sizeof(strloc)-1,fichier)!=(char *)0) {
             if (sscanf(strloc,"%d",&pid)==1) {
