@@ -29,9 +29,86 @@
 #include	"subprc.h"
 #include	"unilck.h"
 
+#define         PROG    "unilck.c"
+
 /*Application locking directory			*/
 #define	LOCKEXT	"-lock"	/*lock file extension	*/
 
+/*
+
+*/
+/************************************************/
+/*						*/
+/*	Procedure to check if a file can safely */
+/*	be unlinked                             */
+/*						*/
+/************************************************/
+static _Bool rm_lock(FILE *fichier,const char *lockname)
+
+{
+#define	OPEP	PROG":rm_lock,"
+
+_Bool isok;
+
+int fd;
+struct stat st_fd;
+struct stat st_path;
+int phase;
+_Bool proceed;
+
+isok=false;
+fd=-1;
+(void) memset(&st_fd,'\000',sizeof(struct stat));
+(void) memset(&st_path,'\000',sizeof(struct stat));
+phase=0;
+proceed=true;
+while (proceed==true) {
+  switch (phase) {
+    case 0      :       //getting the file destciptor
+      if ((fichier==(FILE *)0)||((fd=fileno(fichier))<0)) {
+        (void) log_alert(0,"%s Unable to get <%s> file descriptor "
+                           "(error=<%s> Bug?)",OPEP,lockname,strerror(errno));
+        phase=999;      //Trouble!
+        }
+      break;
+    case 1      :       //getting fstat
+      if (fstat(fd,&st_fd)<0) {
+        (void) log_alert(0,"%s Unable to get <%s> file status (error=<%s> Bug?)",
+			    OPEP,lockname,strerror(errno));
+        phase=999;      //Trouble!
+        }
+      break;
+    case 2      :       //getting lstat
+      if (lstat(lockname,&st_path)<0) {
+        (void) log_alert(0,"%s Unable to get <%s> link file info "
+                           "(error=<%s> Bug?)",OPEP,lockname,strerror(errno));
+        phase=999;      //Trouble!
+        }
+      break;
+    case 3      :       //clear to unlink
+      if ((st_fd.st_ino!=st_path.st_ino)||(st_fd.st_dev!=st_path.st_dev)) {
+        (void) log_alert(0,"%s file <%s> stat inconsitency (System?)",
+                           OPEP,lockname);
+        phase=999;      //Trouble!
+        }
+      break;
+    case 4      :       //clear to unlink
+      isok=true;
+      if (unlink(lockname)<0) {
+        (void) log_alert(0,"%s Unable to unlink file <%s> (error=<%s> System?)",
+                            OPEP,lockname,strerror(errno));
+        isok=false;
+        }
+      break;
+    default     :       //SAFE Guard
+      proceed=false;
+      break;
+    }
+  phase++;
+  }
+return isok;
+#undef  OPEP
+}
 /*
 
 */
@@ -118,7 +195,7 @@ while (proceed==true) {
               (void) log_alert(1,"Locking, check %d process active",pid);
 	      if (prc_checkprocess(pid)==false) {
                 (void) log_alert(1,"Locking, removing unactive lock");
-	        (void) unlink(lockname);
+                (void) rm_lock(fichier,lockname);
                 }
 	      else {
                 (void) log_alert(0,"found process '%d' to be "
@@ -127,11 +204,11 @@ while (proceed==true) {
 	        }
 	      }
 	    }
-	  (void) fclose(fichier);
 	  if (strlen(strloc)==0) {
             (void) log_alert(1,"Locking, removing empty lock");
-	    (void) unlink(lockname);
+            (void) rm_lock(fichier,lockname);
 	    }
+	  (void) fclose(fichier);
 	  (void) sleep(1);
 	  }
 	tentative--;
