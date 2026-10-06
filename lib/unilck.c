@@ -170,7 +170,7 @@ while (proceed==true) {
       break;
     case 3	:	//checking if link already exist
       if (stat(lockname,&bufstat)<0) {
-	phase++;	//link doesn't exist
+	phase+=2;	//link doesn't exist no need to check it
 	}
       break;
     case 4	:	//making lockname
@@ -178,18 +178,21 @@ while (proceed==true) {
         (void) log_alert(0,"<%s> is not a file!, unable to lock (sysadmin?)",
 			   lockname);
 	phase=999;	//major trouble
-	break;		
 	}
+      break;
+    case 5	:	//trying to address old lock file existence
       while (tentative>0) {
         int fd;
 
         if ((fd=open(lockname,O_RDONLY|O_NOFOLLOW|O_CLOEXEC))<0)
 	  break;	//lock file now missing, lets continue
 	else {
-          int pid;
+          _Bool isok;
           FILE *fichier;
+          int pid;
           char strloc[80];
 
+          isok=false;
           fichier=fdopen(fd,"r");
 	  (void) memset(strloc,'\000',sizeof(strloc)); 
 	  if (fgets(strloc,sizeof(strloc)-1,fichier)!=(char *)0) {
@@ -197,7 +200,7 @@ while (proceed==true) {
               (void) log_alert(1,"Locking, check %d process active",pid);
 	      if (prc_checkprocess(pid)==false) {
                 (void) log_alert(1,"Locking, removing unactive lock");
-                (void) rm_lock(fichier,lockname);
+                isok=rm_lock(fichier,lockname);
                 }
 	      else {
                 (void) log_alert(0,"found process '%d' to be "
@@ -208,20 +211,21 @@ while (proceed==true) {
 	    }
 	  if (strlen(strloc)==0) {
             (void) log_alert(1,"Locking, removing empty lock");
-            (void) rm_lock(fichier,lockname);
+            isok=rm_lock(fichier,lockname);
 	    }
 	  (void) fclose(fichier);
 	  (void) sleep(1);
+          if (isok==true)
+            break;        //lock is now removed, no need to try anymore
 	  }
 	tentative--;
         if (tentative==0) {
-          (void) log_alert(0,"Unable to lock container <%s> Giving up",
-			      ident);
+          (void) log_alert(0,"Unable to lock container <%s> Giving up",ident);
 	  phase=999;	//trouble trouble
-	  }
+          }
 	}
       break;
-    case 5	:	//making lockname
+    case 6	:	//making lockname
       (void) log_alert(9,"%s Request locking <%s>",OPEP,lockname);
       if ((handle=creat(lockname,0640))<0) {
         (void) log_alert(0,"Unable to create lock <%s> (error=<%s>) "
@@ -229,7 +233,7 @@ while (proceed==true) {
 	phase=999;	//trouble trouble
 	}
       break;
-    case 6	:	//getting an exclusive access
+    case 7	:	//getting an exclusive access
       if (flock(handle,LOCK_EX)<0) {
         (void) log_alert(0,"Unable to get exclusive access "
 			   "to lock <%s> (error=<%s>) "
@@ -238,7 +242,7 @@ while (proceed==true) {
 	phase=999;	//trouble trouble
 	}
       break;
-    case 7	:	//locking access to file
+    case 8	:	//locking access to file
       if (handle>=0) {	//always
 	int taille;
 	char numid[30];
