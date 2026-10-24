@@ -215,6 +215,10 @@ This package allow to use vzgot on openrc init system.
 %files                  openrc
 %defattr(-, root,root,-)
 %{_sysconfdir}/init.d/%{name}rc
+%{_sysconfdir}/%{name}/distributions/alpine/init.d/vzgotrc
+%{_sysconfdir}/%{name}/distributions/alpine/vzgot-openrc.post-deinstall
+%{_sysconfdir}/%{name}/distributions/alpine/vzgot-openrc.post-install
+%{_sysconfdir}/%{name}/distributions/alpine/vzgot-openrc.post-upgrade
 
 #-----------------------------------------------------------------------------
 %post			openrc

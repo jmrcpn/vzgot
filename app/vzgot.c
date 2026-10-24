@@ -50,7 +50,7 @@
 #include	"unicnt.h"
 
 #define	APPNAME	        "vzgot"
-#define PRG             "vgot.c"
+#define PROG            "vgot.c"
 
 #define VZGOT_ROOT      "/vzgot/test"
 
@@ -173,7 +173,7 @@ return syscall(SYS_pidfd_open,pid,flags);
 static int setarch(char *arch)
 
 {
-#define OPEP    PRG":setarch"
+#define OPEP    PROG":setarch"
 
 static	struct	{
 		const char *arch;
@@ -213,7 +213,7 @@ return status;
 static _Bool monitoring(int mfd,const char *contname)
 
 {
-#define OPEP            PRG":monitoring"
+#define OPEP            PROG":monitoring"
 
 static char mrk[200];
 static char *argv[]={mrk,(char *)0};
@@ -268,7 +268,7 @@ return isok;
 static void pty_tracker(int master_fd,const char *log_path)
 
 {
-#define OPEP PRG":pty_tracker"
+#define OPEP PROG":pty_tracker"
 
 int log_fd;
 ssize_t n_read;
@@ -394,7 +394,7 @@ return status;
 static int cont_shutdown(int argc,char *argv[])
 
 {
-#define OPEP    PRG":cont_shutdown"
+#define OPEP    PROG":cont_shutdown"
 
 int status;
 pid_t cntpid;
@@ -497,7 +497,7 @@ static int cont_attend(const char *contname,pid_t contpid)
 
 
 {
-#define OPEP    PRG":cont_attend"
+#define OPEP    PROG":cont_attend"
 
 int status;
 int sleep_ms;   //waiting time in ms
@@ -698,7 +698,7 @@ return status;
 static _Bool track_console(CONTYP *conf,int master_fd,char *slave)
 
 {
-#define OPEP    PRG":track_console"
+#define OPEP    PROG":track_console"
 #define LOGGER  "[Logr]"
 
 _Bool isok;
@@ -790,7 +790,7 @@ return isok;
 static int doboot(CONTYP *cont)
 
 {
-#define OPEP    PRG":doboot"
+#define OPEP    PROG":doboot"
 #define CONT    "[Cont]"
 #define LIBBIN  "/usr/libexec/"VZGOT"/bin"
 
@@ -1062,7 +1062,7 @@ return status;
 static void start_clone(CONTYP *cont)
 
 {
-#define OPEP    PRG":start_clone"
+#define OPEP    PROG":start_clone"
 
 int status;
 int phase;
@@ -1311,7 +1311,7 @@ return status;
 static int boot(int argc,char *argv[])
 
 {
-#define OPEP PRG":boot"
+#define OPEP PROG":boot"
 #define HST "[Host]"
 
 static char *default_args[] = {"/sbin/init",NULL};
@@ -1551,6 +1551,7 @@ while (proceed==true) {
           goto REBOOT;
           break;
         case 2  :       //Standard poweroff
+          status=0;
           break;
         default :       //Unexpected status
           (void) log_alert(0,"%s Step %2d: unexpected container <%s> status='%d'",
@@ -1634,7 +1635,7 @@ return status;
 static int action(int argc,char *argv[])
 
 {
-#define OPEP    "vzgot.c:action"
+#define OPEP    PROG":action"
 
 int status;
 char *parms[]={"contname","/bin/sh",(char *)0};
@@ -1751,6 +1752,11 @@ else {
 	(void) usage();
         status=1;	
         break;
+      }
+    if (status!=0) {
+      (void) fprintf(stderr,"%s, PID='%d' Unable to '%s' container <%s>, "
+                            "status='%d' (see system logs)\n",
+                            OPEP,getpid(),(char *)(voc->key),argv[1],status);
       }
     }
   }

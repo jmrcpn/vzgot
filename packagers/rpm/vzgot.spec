@@ -3,7 +3,7 @@
 %bcond_with	debug
 #-----------------------------------------------------------------------------
 Name		:	vzgot
-Version		:	26.10.11
+Version		:	26.10.33
 Release		:	1%{?dist}
 Summary		:	An application to drive linux container
 Group		:	System Environment/Daemons
@@ -215,6 +215,10 @@ This package allow to use vzgot on openrc init system.
 %files                  openrc
 %defattr(-, root,root,-)
 %{_sysconfdir}/init.d/%{name}rc
+%{_sysconfdir}/%{name}/distributions/alpine/init.d/vzgotrc
+%{_sysconfdir}/%{name}/distributions/alpine/vzgot-openrc.post-deinstall
+%{_sysconfdir}/%{name}/distributions/alpine/vzgot-openrc.post-install
+%{_sysconfdir}/%{name}/distributions/alpine/vzgot-openrc.post-upgrade
 
 #-----------------------------------------------------------------------------
 %post			openrc
@@ -329,7 +333,7 @@ date > %{name}-%{version}-%{release}.build_date
 
 #-----------------------------------------------------------------------------
 %changelog
-* Tue Oct 06 2026 Jean-Marc Pigeon <jmp@safe.ca> - 26.10.11-1
+* Sat Oct 24 2026 Jean-Marc Pigeon <jmp@safe.ca> - 26.10.33-1
 - Automatic build from Makefile.
 
 #-----------------------------------------------------------------------------

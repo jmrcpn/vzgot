@@ -10,3 +10,6 @@ vzgot: package-contains-empty-directory [vzgot/]
 
 #no manual yet
 vzgot: no-manual-page [usr/sbin/vzgot]
+
+# OpenRC utility is uncluded but for Alpine container only
+vzgot: unusual-interpreter /sbin/openrc-run [etc/vzgot/distributions/alpine/init.d/vzgotrc]
