@@ -3,7 +3,7 @@
 %bcond_with	debug
 #-----------------------------------------------------------------------------
 Name		:	vzgot
-Version		:	26.10.33
+Version		:	26.10.55
 Release		:	1%{?dist}
 Summary		:	An application to drive linux container
 Group		:	System Environment/Daemons
@@ -75,6 +75,7 @@ long their kernel is a Linux one
 %{_prefix}/libexec/%{name}/utilities/setcpu
 %{_prefix}/libexec/%{name}/utilities/tstavg
 %{_prefix}/libexec/%{name}/shell/%{name}.boot
+%{_prefix}/libexec/%{name}/shell/%{name}.boot.Alma
 %{_prefix}/libexec/%{name}/shell/%{name}.boot.Alpine
 %{_prefix}/libexec/%{name}/shell/%{name}.boot.Centos
 %{_prefix}/libexec/%{name}/shell/%{name}.boot.Debian
@@ -88,6 +89,7 @@ long their kernel is a Linux one
 %{_prefix}/libexec/%{name}/shell/%{name}.boot.Void
 %{_prefix}/libexec/%{name}/shell/%{name}.build
 %{_prefix}/libexec/%{name}/shell/%{name}.create
+%{_prefix}/libexec/%{name}/shell/%{name}.create.Alma
 %{_prefix}/libexec/%{name}/shell/%{name}.create.Alpine
 %{_prefix}/libexec/%{name}/shell/%{name}.create.Centos
 %{_prefix}/libexec/%{name}/shell/%{name}.create.Debian
@@ -113,6 +115,7 @@ long their kernel is a Linux one
 %{_prefix}/libexec/%{name}/shell/%{name}.sleep
 %{_prefix}/libexec/%{name}/shell/%{name}.standby
 %{_prefix}/libexec/%{name}/shell/%{name}.tools
+%exclude %{_sysconfdir}/%{name}/distributions/alpine
 %{_sysconfdir}/%{name}/distributions/
 %dir %{_sysconfdir}/%{name}/sites_data
 %dir %{_sysconfdir}/%{name}/names
@@ -333,7 +336,7 @@ date > %{name}-%{version}-%{release}.build_date
 
 #-----------------------------------------------------------------------------
 %changelog
-* Sat Oct 24 2026 Jean-Marc Pigeon <jmp@safe.ca> - 26.10.33-1
+* Thu Oct 29 2026 Jean-Marc Pigeon <jmp@safe.ca> - 26.10.55-1
 - Automatic build from Makefile.
 
 #-----------------------------------------------------------------------------

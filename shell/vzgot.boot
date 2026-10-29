@@ -93,6 +93,9 @@ fi
 #network setup from HOST standpoin
 #setting distribution
 case "${DISTRIB}" in
+  "alma"	)
+    FLINUX="Alma"	#Alma family distribution
+    ;;
   "alpine"	)
     FLINUX="Alpine"	#Alpine family distribution
     ;;

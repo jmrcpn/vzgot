@@ -8,6 +8,9 @@ if [ -f /etc/os-release ]; then
   . /etc/os-release
 
   case "${ID}" in
+    "almalinux"			)
+      DIST_ID="alma${VERSION_ID}"
+      ;;
     "alpine"			)
       DIST_ID="${ID}${VERSION_ID}"
       ;;

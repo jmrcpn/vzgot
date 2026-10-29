@@ -7,21 +7,21 @@
 :INPUT          ACCEPT  [0:0]
 :FORWARD        ACCEPT  [0:0]
 :OUTPUT         ACCEPT  [0:0]
-:std            -       [0:0]
+:logdrop	  -	[0:0]
+:logrjct	  -	[0:0]
+:rjct		  -	[0:0]
+:std		  -	[0:0]
 #-----------------------------------------------------------
 #NFLOG need ulogd daemon to report dropped/rejected packets
 #Defining a log drop rule (preset on groupe 1)
 #(/var/log/messages)
--N logdrop
--A logdrop    -j NFLOG    --nflog-group 1 --nflog-prefix "DROP "
+-A logdrop    -j NFLOG	--nflog-group 1 --nflog-prefix "DROP "
 -A logdrop    -j DROP
 #Defining a log reject rule (Forcé sur le groupe 1)
--N logrjct
--A logrjct    -j NFLOG    --nflog-group 1 --nflog-prefix "RJCT "
--A logrjct    -j REJECT    --reject-with icmp-host-prohibited
+-A logrjct    -j NFLOG	--nflog-group 1 --nflog-prefix "RJCT "
+-A logrjct    -j REJECT	--reject-with	icmp-host-prohibited
 #--------------------------------------------------------------
 #defining rule to reject without log
--N rjct
 -A rjct -j DROP
 #-----------------------------------------------------------
 #standard rules
@@ -32,7 +32,7 @@
 -A std -i lo -j ACCEPT
 #-----------------------------------------------------------
 #acceptin already established link
--A std -m state --state ESTABLISHED,RELATED -j ACCEPT
+-A std -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 #-----------------------------------------------------------
 #accepting icmp packet (should be already pre-filtered by Host)
 -A std -p icmp -j ACCEPT

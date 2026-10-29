@@ -75,6 +75,7 @@ long their kernel is a Linux one
 %{_prefix}/libexec/%{name}/utilities/setcpu
 %{_prefix}/libexec/%{name}/utilities/tstavg
 %{_prefix}/libexec/%{name}/shell/%{name}.boot
+%{_prefix}/libexec/%{name}/shell/%{name}.boot.Alma
 %{_prefix}/libexec/%{name}/shell/%{name}.boot.Alpine
 %{_prefix}/libexec/%{name}/shell/%{name}.boot.Centos
 %{_prefix}/libexec/%{name}/shell/%{name}.boot.Debian
@@ -88,6 +89,7 @@ long their kernel is a Linux one
 %{_prefix}/libexec/%{name}/shell/%{name}.boot.Void
 %{_prefix}/libexec/%{name}/shell/%{name}.build
 %{_prefix}/libexec/%{name}/shell/%{name}.create
+%{_prefix}/libexec/%{name}/shell/%{name}.create.Alma
 %{_prefix}/libexec/%{name}/shell/%{name}.create.Alpine
 %{_prefix}/libexec/%{name}/shell/%{name}.create.Centos
 %{_prefix}/libexec/%{name}/shell/%{name}.create.Debian
@@ -113,6 +115,7 @@ long their kernel is a Linux one
 %{_prefix}/libexec/%{name}/shell/%{name}.sleep
 %{_prefix}/libexec/%{name}/shell/%{name}.standby
 %{_prefix}/libexec/%{name}/shell/%{name}.tools
+%exclude %{_sysconfdir}/%{name}/distributions/alpine
 %{_sysconfdir}/%{name}/distributions/
 %dir %{_sysconfdir}/%{name}/sites_data
 %dir %{_sysconfdir}/%{name}/names

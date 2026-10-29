@@ -28,6 +28,7 @@ eblpack	: vztar
 		$(DIST_ID)/sys-apps/$(APPNAME)/
 	   (							\
 	     cd $(DIST_ID)/sys-apps/$(APPNAME);			\
+	     TERM=dumb						\
 	     PORTAGE_TMPDIR=$(CURDIR)/$(DIST_ID)/tmp		\
 	     PORT_LOGDIR=$(CURDIR)/$(DIST_ID)/logs		\
 	     DISTDIR=$(CURDIR)/$(DIST_ID)/distfiles 		\
@@ -37,8 +38,6 @@ eblpack	: vztar
 	     FEATURES="userpriv -sandbox -usersandbox -fakeroot"\
 	     ebuild $(APPNAME)-$(VERSION).ebuild		\
 	     	digest						\
-		compile						\
-		install						\
 		package;					\
 	     )
 	   @ rm -fr $(LOCREPO)

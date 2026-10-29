@@ -1,6 +1,8 @@
 #--------------------------------------------------------------------
 #to compile opensrc clement application
 #--------------------------------------------------------------------
+FORTIFY_FLAG = $(if $(findstring _FORTIFY_SOURCE,$(CPPFLAGS) $(CFLAGS)),,-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3)
+
 debug	:
 	  @ $(MAKE)						\
 		OPTIME="-O0 -ggdb -fsanitize=address"		\
@@ -9,10 +11,10 @@ debug	:
 
 prod	:
 	  @ $(MAKE)						\
-		OPTIME="-ggdb3 -D_FORTIFY_SOURCE=2 -O2"		\
+		OPTIME="-ggdb3 $(FORTIFY_FLAG) -O2" 		\
 		VZMON="-static"					\
 		exe
-	  @ strip $(EXE) $(STA)
+	  @ # strip $(EXE) $(STA)
 
 #version to be used with gdb in live test system
 withgdb	:

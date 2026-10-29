@@ -4,6 +4,7 @@
 RPMVER	= $(VERSION).$(DIST_ID)-$(RELEASE).$(DIST)
 
 #--------------------------------------------------------------------
+almalinux								\
 fedora									\
 mageia									\
 opensuse-tumbleweed							\

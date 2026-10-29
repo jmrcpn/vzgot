@@ -126,6 +126,9 @@ else
   export HOST_DNS=$(get_dns_servers)
 #setting distribution
   case "$DISTRIB" in
+    "alma"	)
+      FLINUX="Alma"	#Alma family distribution
+      ;;
     "alpine"	)
       FLINUX="Alpine"	#Alpine family distribution
       ;;

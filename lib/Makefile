@@ -1,6 +1,7 @@
 #--------------------------------------------------------------------
 #to compile vzgot open source library
 #--------------------------------------------------------------------
+FORTIFY_FLAG = $(if $(findstring _FORTIFY_SOURCE,$(CPPFLAGS) $(CFLAGS)),,-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3)
 
 debug	:
 	  @ $(MAKE)						\
@@ -11,7 +12,7 @@ debug	:
 
 prod	:
 	  @ $(MAKE)						\
-		OPTIME="-ggdb3 -D_FORTIFY_SOURCE=2 -O2" 	\
+		OPTIME="-ggdb3 $(FORTIFY_FLAG) -O2" 		\
 	        memlib
 
 #version to be used with gdb
