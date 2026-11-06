@@ -64,6 +64,22 @@ if [ -f $CONFDIR/vzgot_config ] ; then
   fi
 
 #------------------------------------------------------------------
+vzloadmod()
+
+{
+if [ -n "$1" ] ; then
+  while IFS= read -r module || [ -n "$module" ]; do
+    module=$(echo "$module" | xargs)
+    case "$module" in
+       ""|\#*		)
+	 continue 
+         ;;
+      esac
+    modprobe "$module" 2>/dev/null
+    done < "$1"
+  fi
+}
+#------------------------------------------------------------------
 vzgotstart()
 
 {
@@ -163,35 +179,13 @@ return ${ret}
 }
 
 #------------------------------------------------------------------
-VZ_MOD_LIST="							\
-		fuse 						\
-		nfnetlink					\
-		nft_compat					\
-		nft_ct						\
-		nft_log						\
-		nft_reject					\
-		nf_tables					\
-		nf_log_common					\
-		nf_reject_ipv4					\
-		nf_reject_ipv6					\
-		nf_conntrack					\
-		nf_nat						\
-		nf_defrag_ipv4					\
-		nf_defrag_ipv6					\
-		xt_conntrack					\
-		xt_state					\
-		"
-
 ret=0;
 case "$1" in
   start		)
 	#make sure to have a good sysctl
 	sysctl --system -q > /dev/null
-	#make sure to have a we have all needed module
-	for module in ${VZ_MOD_LIST}
-	  do
-	  /sbin/modprobe $module >/dev/null 2>&1
-	  done
+	#loading needed modules
+	vzloadmod  "/etc/modules-load.d/vzgot.conf"
 	# mounting  loop device (if any)
         mount -a -O loop 2>/dev/null || true
 	#cgroup configuration

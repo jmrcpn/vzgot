@@ -52,6 +52,7 @@ doapl	:
 	   @ cp -a						\
 		README*						\
 		QUICK-START					\
+		modules-load.d					\
 	   	$(APLR)
 	   @ cp -a 						\
 		   etc/users					\
@@ -110,7 +111,10 @@ install	:
 	   @ install -d $(DESTDIR)/etc/$(APPNAME)
 	   @ cp -a 							\
 		distributions						\
-	   	$(DESTDIR)/etc/$(APPNAME)
+	   	$(DESTDIR)/etc/$(APPNAME)/
+	   @ cp -a 							\
+		modules-load.d						\
+	   	$(DESTDIR)/etc/
 	   @ install -m 0644 conf/vzgot_config $(DESTDIR)/etc/$(APPNAME)
 	   @ install -m 0644 conf/vzgot_list $(DESTDIR)/etc/$(APPNAME)
 	   @ install -m 0644 conf/online.tpl $(DESTDIR)/etc/$(APPNAME)

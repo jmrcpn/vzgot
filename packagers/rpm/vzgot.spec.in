@@ -119,6 +119,7 @@ long their kernel is a Linux one
 %{_sysconfdir}/%{name}/distributions/
 %dir %{_sysconfdir}/%{name}/sites_data
 %dir %{_sysconfdir}/%{name}/names
+%config(noreplace) %{_sysconfdir}/modules-load.d/%{name}.conf
 %config(noreplace) %{_sysconfdir}/%{name}/vzgot_config
 %config(noreplace) %{_sysconfdir}/%{name}/vzgot_list
 %config(noreplace) %{_sysconfdir}/%{name}/online.tpl

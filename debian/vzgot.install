@@ -16,3 +16,4 @@ usr/sbin/vzgot
 usr/libexec/vzgot/
 etc/vzgot/
 etc/sysctl.d/vzgot.conf
+etc/modules-load.d/vzgot.conf
